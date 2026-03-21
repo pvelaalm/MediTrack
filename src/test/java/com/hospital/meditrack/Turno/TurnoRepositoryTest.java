@@ -1,4 +1,4 @@
-package com.hospital.meditrack;
+package com.hospital.meditrack.Turno;
 
 
 import com.hospital.meditrack.model.entity.Turno;

@@ -540,19 +540,684 @@ mvn test
 
 ### Completado:
 - ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
-- ✅ Fase 4: Paciente completo (Entity, Repository, Service, Controller, Tests - 13 tests)
-- ✅ Fase 5: Usuario completo (PasswordEncoderConfig, Entity con BCrypt, Repository, Service, Controller, Tests - 13 tests)
+- ✅ Fase 4: Paciente completo (13 tests)
+- ✅ Fase 5: Usuario con BCrypt (13 tests)
+- ✅ Fase 6: TareaClinica con 3 relaciones @ManyToOne (18 tests)
 
 ### Siguiente Paso:
-**Fase 6: Crear entidad TareaClinica (la más compleja - 3 relaciones @ManyToOne)**
-1. Entity `TareaClinica` con relaciones: `asignadoA` (Usuario), `paciente` (Paciente), `turno` (Turno)
-2. `TareaClinicaRepository` con: findByPacienteId, findByAsignadoAId, findByTurnoId, findByEstado, findByPrioridad
-3. `TareaClinicaService` con validaciones (comprobar que existen Usuario, Paciente y Turno)
-4. `TareaClinicaController` con endpoints estándar + endpoints de filtro
-5. Tests mínimo 15 (por complejidad de relaciones)
-6. Commits atómicos
+**Fase 7: Spring Security con RBAC**
+1. Crear `SecurityConfig.java` con roles: ENFERMERIA, MEDICINA, SUPERVISOR
+2. Endpoint protegidos según rol (ver CLAUDE.md Fase 7)
+3. Login personalizado
+4. Tests de seguridad (5+ tests)
+5. Commits atómicos
+
+### Total Tests Actual:
+- Turno: 13/13 ✅
+- Paciente: 13/13 ✅
+- Usuario: 13/13 ✅
+- TareaClinica: 18/18 ✅
+- **Total: 58/58** ✅ (incluyendo App: 1)
 
 ---
+
+## 🎯 SIGUIENTE PASO INMEDIATO
+
+### FASE 6 - TAREACLINICA CON RELACIONES @ManyToOne
+
+**ESTA ES LA ENTIDAD MÁS COMPLEJA DEL PROYECTO**
+
+**Complejidad:**
+- 3 relaciones @ManyToOne (Usuario, Paciente, Turno)
+- Validaciones de existencia de relaciones
+- Métodos de búsqueda con filtros
+- Tests más extensos (mínimo 18 tests)
+
+---
+
+### ACCIÓN REQUERIDA:
+
+#### 1. **Crear Entity TareaClinica.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/model/entity/TareaClinica.java`
+
+**Estructura:**
+
+```java
+package com.hospital.meditrack.model.entity;
+
+import com.hospital.meditrack.model.enums.EstadoTarea;
+import com.hospital.meditrack.model.enums.Prioridad;
+import com.hospital.meditrack.model.enums.TipoTarea;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "tarea_clinica")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TareaClinica {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false, length = 500)
+    private String descripcion;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoTarea tipo;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Prioridad prioridad;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoTarea estado;
+    
+    @Column(nullable = false)
+    private LocalDateTime fecha;
+    
+    @Column(length = 1000)
+    private String observaciones;
+    
+    // RELACIONES
+    @ManyToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario asignadoA;
+    
+    @ManyToOne
+    @JoinColumn(name = "paciente_id", nullable = false)
+    private Paciente paciente;
+    
+    @ManyToOne
+    @JoinColumn(name = "turno_id", nullable = false)
+    private Turno turno;
+}
+```
+
+**IMPORTANTE:**
+- Las 3 relaciones son `nullable = false` (obligatorias)
+- Los enums se mapean como STRING (no ORDINAL)
+- LocalDateTime para fecha (no LocalDate)
+
+---
+
+#### 2. **Crear TareaClinicaRepository.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/repository/TareaClinicaRepository.java`
+
+**Métodos custom necesarios:**
+
+```java
+package com.hospital.meditrack.repository;
+
+import com.hospital.meditrack.model.entity.TareaClinica;
+import com.hospital.meditrack.model.enums.EstadoTarea;
+import com.hospital.meditrack.model.enums.Prioridad;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface TareaClinicaRepository extends JpaRepository<TareaClinica, Long> {
+    
+    // Buscar por relaciones
+    List<TareaClinica> findByPacienteId(Long pacienteId);
+    List<TareaClinica> findByAsignadoAId(Long usuarioId);
+    List<TareaClinica> findByTurnoId(Long turnoId);
+    
+    // Buscar por enums
+    List<TareaClinica> findByEstado(EstadoTarea estado);
+    List<TareaClinica> findByPrioridad(Prioridad prioridad);
+    
+    // Combinaciones útiles
+    List<TareaClinica> findByAsignadoAIdAndEstado(Long usuarioId, EstadoTarea estado);
+    List<TareaClinica> findByTurnoIdAndEstado(Long turnoId, EstadoTarea estado);
+}
+```
+
+---
+
+#### 3. **Crear TareaClinicaService.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/service/TareaClinicaService.java`
+
+**VALIDACIONES CRÍTICAS:**
+
+```java
+package com.hospital.meditrack.service;
+
+import com.hospital.meditrack.model.entity.TareaClinica;
+import com.hospital.meditrack.model.enums.EstadoTarea;
+import com.hospital.meditrack.model.enums.Prioridad;
+import com.hospital.meditrack.repository.TareaClinicaRepository;
+import com.hospital.meditrack.repository.UsuarioRepository;
+import com.hospital.meditrack.repository.PacienteRepository;
+import com.hospital.meditrack.repository.TurnoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class TareaClinicaService {
+    
+    @Autowired
+    private TareaClinicaRepository tareaRepository;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private PacienteRepository pacienteRepository;
+    
+    @Autowired
+    private TurnoRepository turnoRepository;
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerTodas() {
+        return tareaRepository.findAll();
+    }
+    
+    @Transactional(readOnly = true)
+    public Optional<TareaClinica> obtenerPorId(Long id) {
+        return tareaRepository.findById(id);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerPorPaciente(Long pacienteId) {
+        return tareaRepository.findByPacienteId(pacienteId);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerPorUsuario(Long usuarioId) {
+        return tareaRepository.findByAsignadoAId(usuarioId);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerPorTurno(Long turnoId) {
+        return tareaRepository.findByTurnoId(turnoId);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerPorEstado(EstadoTarea estado) {
+        return tareaRepository.findByEstado(estado);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<TareaClinica> obtenerPorPrioridad(Prioridad prioridad) {
+        return tareaRepository.findByPrioridad(prioridad);
+    }
+    
+    @Transactional
+    public TareaClinica crear(TareaClinica tarea) {
+        // VALIDAR que existan las relaciones
+        if (tarea.getAsignadoA() == null || tarea.getAsignadoA().getId() == null) {
+            throw new IllegalArgumentException("Debe asignar la tarea a un usuario");
+        }
+        if (tarea.getPaciente() == null || tarea.getPaciente().getId() == null) {
+            throw new IllegalArgumentException("Debe asociar la tarea a un paciente");
+        }
+        if (tarea.getTurno() == null || tarea.getTurno().getId() == null) {
+            throw new IllegalArgumentException("Debe asociar la tarea a un turno");
+        }
+        
+        // Verificar que existan en BD
+        if (!usuarioRepository.existsById(tarea.getAsignadoA().getId())) {
+            throw new IllegalArgumentException("El usuario asignado no existe");
+        }
+        if (!pacienteRepository.existsById(tarea.getPaciente().getId())) {
+            throw new IllegalArgumentException("El paciente no existe");
+        }
+        if (!turnoRepository.existsById(tarea.getTurno().getId())) {
+            throw new IllegalArgumentException("El turno no existe");
+        }
+        
+        return tareaRepository.save(tarea);
+    }
+    
+    @Transactional
+    public TareaClinica actualizar(Long id, TareaClinica tareaActualizada) {
+        return tareaRepository.findById(id)
+            .map(tarea -> {
+                tarea.setDescripcion(tareaActualizada.getDescripcion());
+                tarea.setTipo(tareaActualizada.getTipo());
+                tarea.setPrioridad(tareaActualizada.getPrioridad());
+                tarea.setEstado(tareaActualizada.getEstado());
+                tarea.setFecha(tareaActualizada.getFecha());
+                tarea.setObservaciones(tareaActualizada.getObservaciones());
+                
+                // Actualizar relaciones si se proporcionan
+                if (tareaActualizada.getAsignadoA() != null) {
+                    if (!usuarioRepository.existsById(tareaActualizada.getAsignadoA().getId())) {
+                        throw new IllegalArgumentException("El usuario asignado no existe");
+                    }
+                    tarea.setAsignadoA(tareaActualizada.getAsignadoA());
+                }
+                if (tareaActualizada.getPaciente() != null) {
+                    if (!pacienteRepository.existsById(tareaActualizada.getPaciente().getId())) {
+                        throw new IllegalArgumentException("El paciente no existe");
+                    }
+                    tarea.setPaciente(tareaActualizada.getPaciente());
+                }
+                if (tareaActualizada.getTurno() != null) {
+                    if (!turnoRepository.existsById(tareaActualizada.getTurno().getId())) {
+                        throw new IllegalArgumentException("El turno no existe");
+                    }
+                    tarea.setTurno(tareaActualizada.getTurno());
+                }
+                
+                return tareaRepository.save(tarea);
+            })
+            .orElseThrow(() -> new IllegalArgumentException("No se encontró la tarea con ID: " + id));
+    }
+    
+    @Transactional
+    public void eliminar(Long id) {
+        tareaRepository.deleteById(id);
+    }
+}
+```
+
+**NOTAS IMPORTANTES:**
+- Validar existencia de Usuario, Paciente y Turno ANTES de guardar
+- Usar `existsById()` para verificar
+- Mensajes de error descriptivos
+
+---
+
+#### 4. **Crear TareaClinicaController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/TareaClinicaController.java`
+
+**Endpoints necesarios:**
+
+```java
+package com.hospital.meditrack.controller;
+
+import com.hospital.meditrack.model.entity.TareaClinica;
+import com.hospital.meditrack.model.enums.EstadoTarea;
+import com.hospital.meditrack.model.enums.Prioridad;
+import com.hospital.meditrack.service.TareaClinicaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/tareas")
+public class TareaClinicaController {
+    
+    @Autowired
+    private TareaClinicaService tareaService;
+    
+    // GET /api/tareas
+    @GetMapping
+    public ResponseEntity<List<TareaClinica>> obtenerTodas() {
+        List<TareaClinica> tareas = tareaService.obtenerTodas();
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // GET /api/tareas/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<TareaClinica> obtenerPorId(@PathVariable Long id) {
+        return tareaService.obtenerPorId(id)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+    
+    // GET /api/tareas/paciente/{pacienteId}
+    @GetMapping("/paciente/{pacienteId}")
+    public ResponseEntity<List<TareaClinica>> obtenerPorPaciente(@PathVariable Long pacienteId) {
+        List<TareaClinica> tareas = tareaService.obtenerPorPaciente(pacienteId);
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // GET /api/tareas/usuario/{usuarioId}
+    @GetMapping("/usuario/{usuarioId}")
+    public ResponseEntity<List<TareaClinica>> obtenerPorUsuario(@PathVariable Long usuarioId) {
+        List<TareaClinica> tareas = tareaService.obtenerPorUsuario(usuarioId);
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // GET /api/tareas/turno/{turnoId}
+    @GetMapping("/turno/{turnoId}")
+    public ResponseEntity<List<TareaClinica>> obtenerPorTurno(@PathVariable Long turnoId) {
+        List<TareaClinica> tareas = tareaService.obtenerPorTurno(turnoId);
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // GET /api/tareas/estado/{estado}
+    @GetMapping("/estado/{estado}")
+    public ResponseEntity<List<TareaClinica>> obtenerPorEstado(@PathVariable EstadoTarea estado) {
+        List<TareaClinica> tareas = tareaService.obtenerPorEstado(estado);
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // GET /api/tareas/prioridad/{prioridad}
+    @GetMapping("/prioridad/{prioridad}")
+    public ResponseEntity<List<TareaClinica>> obtenerPorPrioridad(@PathVariable Prioridad prioridad) {
+        List<TareaClinica> tareas = tareaService.obtenerPorPrioridad(prioridad);
+        return ResponseEntity.ok(tareas);
+    }
+    
+    // POST /api/tareas
+    @PostMapping
+    public ResponseEntity<TareaClinica> crear(@RequestBody TareaClinica tarea) {
+        try {
+            TareaClinica tareaCreada = tareaService.crear(tarea);
+            return ResponseEntity.status(HttpStatus.CREATED).body(tareaCreada);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // PUT /api/tareas/{id}
+    @PutMapping("/{id}")
+    public ResponseEntity<TareaClinica> actualizar(
+            @PathVariable Long id, 
+            @RequestBody TareaClinica tarea) {
+        try {
+            TareaClinica tareaActualizada = tareaService.actualizar(id, tarea);
+            return ResponseEntity.ok(tareaActualizada);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
+    // DELETE /api/tareas/{id}
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        tareaService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+---
+
+#### 5. **Crear Tests (18 tests total)**
+
+**Tests más complejos por las relaciones:**
+
+##### A. TareaClinicaRepositoryTest.java (3 tests)
+
+```java
+package com.hospital.meditrack;
+
+import com.hospital.meditrack.model.entity.*;
+import com.hospital.meditrack.model.enums.*;
+import com.hospital.meditrack.repository.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+@Transactional
+@TestPropertySource(locations = "classpath:application-test.properties")
+class TareaClinicaRepositoryTest {
+    
+    @Autowired
+    private TareaClinicaRepository tareaRepository;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private PacienteRepository pacienteRepository;
+    
+    @Autowired
+    private TurnoRepository turnoRepository;
+    
+    @Test
+    void deberiaGuardarYRecuperarTareaConRelaciones() {
+        // Arrange - Crear datos relacionados
+        Turno turno = crearTurno();
+        Usuario usuario = crearUsuario();
+        Paciente paciente = crearPaciente();
+        
+        TareaClinica tarea = new TareaClinica();
+        tarea.setDescripcion("Administrar medicación");
+        tarea.setTipo(TipoTarea.MEDICACION);
+        tarea.setPrioridad(Prioridad.ALTA);
+        tarea.setEstado(EstadoTarea.PENDIENTE);
+        tarea.setFecha(LocalDateTime.now());
+        tarea.setAsignadoA(usuario);
+        tarea.setPaciente(paciente);
+        tarea.setTurno(turno);
+        
+        // Act
+        TareaClinica tareaGuardada = tareaRepository.save(tarea);
+        
+        // Assert
+        assertNotNull(tareaGuardada.getId());
+        assertEquals("Administrar medicación", tareaGuardada.getDescripcion());
+        assertEquals(usuario.getId(), tareaGuardada.getAsignadoA().getId());
+        assertEquals(paciente.getId(), tareaGuardada.getPaciente().getId());
+        assertEquals(turno.getId(), tareaGuardada.getTurno().getId());
+    }
+    
+    @Test
+    void deberiaBuscarTareasPorPaciente() {
+        // Arrange
+        Turno turno = crearTurno();
+        Usuario usuario = crearUsuario();
+        Paciente paciente = crearPaciente();
+        
+        TareaClinica tarea1 = crearTarea(usuario, paciente, turno, "Tarea 1");
+        TareaClinica tarea2 = crearTarea(usuario, paciente, turno, "Tarea 2");
+        
+        // Act
+        List<TareaClinica> tareas = tareaRepository.findByPacienteId(paciente.getId());
+        
+        // Assert
+        assertEquals(2, tareas.size());
+    }
+    
+    @Test
+    void deberiaBuscarTareasPorEstado() {
+        // Arrange
+        Turno turno = crearTurno();
+        Usuario usuario = crearUsuario();
+        Paciente paciente = crearPaciente();
+        
+        TareaClinica tarea = crearTarea(usuario, paciente, turno, "Tarea pendiente");
+        tarea.setEstado(EstadoTarea.PENDIENTE);
+        tareaRepository.save(tarea);
+        
+        // Act
+        List<TareaClinica> tareas = tareaRepository.findByEstado(EstadoTarea.PENDIENTE);
+        
+        // Assert
+        assertTrue(tareas.size() >= 1);
+        assertTrue(tareas.stream().anyMatch(t -> t.getDescripcion().equals("Tarea pendiente")));
+    }
+    
+    // Métodos helper
+    private Turno crearTurno() {
+        Turno turno = new Turno();
+        turno.setNombre("Mañana-Test-" + System.currentTimeMillis());
+        turno.setHoraInicio(LocalTime.of(7, 0));
+        turno.setHoraFin(LocalTime.of(15, 0));
+        return turnoRepository.save(turno);
+    }
+    
+    private Usuario crearUsuario() {
+        Usuario usuario = new Usuario();
+        usuario.setNombre("Test");
+        usuario.setApellidos("Usuario");
+        usuario.setUsername("test-" + System.currentTimeMillis());
+        usuario.setPassword("password");
+        usuario.setRol(Rol.ENFERMERIA);
+        return usuarioRepository.save(usuario);
+    }
+    
+    private Paciente crearPaciente() {
+        Paciente paciente = new Paciente();
+        paciente.setNombre("Juan");
+        paciente.setApellidos("Pérez");
+        paciente.setFechaNacimiento(LocalDate.of(1990, 1, 1));
+        paciente.setNumeroHistoriaClinica("HC-" + System.currentTimeMillis());
+        paciente.setHabitacion("101");
+        return pacienteRepository.save(paciente);
+    }
+    
+    private TareaClinica crearTarea(Usuario usuario, Paciente paciente, Turno turno, String descripcion) {
+        TareaClinica tarea = new TareaClinica();
+        tarea.setDescripcion(descripcion);
+        tarea.setTipo(TipoTarea.MEDICACION);
+        tarea.setPrioridad(Prioridad.MEDIA);
+        tarea.setEstado(EstadoTarea.PENDIENTE);
+        tarea.setFecha(LocalDateTime.now());
+        tarea.setAsignadoA(usuario);
+        tarea.setPaciente(paciente);
+        tarea.setTurno(turno);
+        return tareaRepository.save(tarea);
+    }
+}
+```
+
+##### B. TareaClinicaServiceTest.java (7 tests con Mockito)
+
+Incluir tests:
+1. `deberiaObtenerTodas`
+2. `deberiaObtenerPorId`
+3. `deberiaCrearTareaConRelacionesValidas`
+4. `noDeberiaCrearTareaSinUsuario`
+5. `noDeberiaCrearTareaSinPaciente`
+6. `noDeberiaCrearTareaSinTurno`
+7. `deberiaActualizarTarea`
+
+##### C. TareaClinicaControllerTest.java (8 tests integración)
+
+Incluir tests:
+1. `deberiaObtenerTodasLasTareas`
+2. `deberiaObtenerTareaPorId`
+3. `deberiaObtenerTareasPorPaciente`
+4. `deberiaObtenerTareasPorUsuario`
+5. `deberiaCrearNuevaTarea`
+6. `noDeberiaCrearTareaSinRelaciones`
+7. `deberiaActualizarTarea`
+8. `deberiaEliminarTarea`
+
+---
+
+#### 6. **Commits Atómicos**
+
+1. `feat: Crear entidad TareaClinica con relaciones @ManyToOne`
+2. `feat: Crear TareaClinicaRepository con métodos de búsqueda`
+3. `feat: Crear TareaClinicaService con validaciones de relaciones`
+4. `feat: Crear TareaClinicaController con endpoints de filtros`
+5. `test: Añadir tests de TareaClinicaRepository (3 tests)`
+6. `test: Añadir tests de TareaClinicaService (7 tests)`
+7. `test: Añadir tests de TareaClinicaController (8 tests)`
+8. `feat: Completar Fase 6 - TareaClinica con relaciones`
+
+---
+
+#### 7. **Ejecutar al Terminar**
+
+```bash
+mvn test
+```
+
+**Resultado esperado:**
+- Tests TareaClinica: 18/18 ✅
+- **TOTAL PROYECTO: 57/57** ✅
+   - Turno: 13
+   - Paciente: 13
+   - Usuario: 13
+   - TareaClinica: 18
+
+---
+
+### ⚠️ CONSIDERACIONES ESPECIALES
+
+**1. Referencias Circulares en JSON:**
+
+Las relaciones bidireccionales pueden causar loops infinitos al serializar JSON.
+
+**Solución:** Usar `@JsonIgnoreProperties` en las relaciones:
+
+```java
+@ManyToOne
+@JoinColumn(name = "usuario_id")
+@JsonIgnoreProperties({"password", "hibernateLazyInitializer", "handler"})
+private Usuario asignadoA;
+```
+
+**2. Lazy Loading en Tests:**
+
+Si hay errores de lazy loading:
+```java
+@ManyToOne(fetch = FetchType.EAGER)  // Solo si es necesario
+```
+
+**3. Validaciones en Service:**
+
+SIEMPRE validar que las relaciones existan antes de guardar:
+```java
+if (!usuarioRepository.existsById(tarea.getAsignadoA().getId())) {
+    throw new IllegalArgumentException("El usuario no existe");
+}
+```
+
+---
+
+### 📋 CHECKLIST FASE 6
+
+Antes de ejecutar:
+- [ ] CLAUDE.md actualizado
+- [ ] Commit de CLAUDE.md realizado
+
+Después de ejecutar:
+- [ ] 18 tests de TareaClinica pasando
+- [ ] Total proyecto: 57/57 tests
+- [ ] 8 commits atómicos en GitHub
+- [ ] API funcional en `/api/tareas`
+
+---
+
+**¿LISTO PARA EJECUTAR?**
+
+Una vez actualizado `CLAUDE.md`, haz:
+
+```bash
+git add CLAUDE.md
+git commit -m "docs: Actualizar CLAUDE.md para Fase 6 - TareaClinica con relaciones
+
+- Definir entidad con 3 relaciones @ManyToOne
+- Especificar validaciones de existencia de relaciones
+- Detallar endpoints con filtros múltiples
+- Definir 18 tests (Repository 3, Service 7, Controller 8)
+- Total esperado: 57/57 tests"
+
+git push origin main
+```
+
+Luego en **Claude Code**:
 
 ## 🎯 INSTRUCCIÓN PRINCIPAL
 
@@ -581,5 +1246,5 @@ mvn test
 ---
 
 **ÚLTIMA ACTUALIZACIÓN:** 28 Abril 2026
-**ESTADO:** Fase 5 COMPLETADA - 40/40 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + App: 1)
-**PRÓXIMA ACCIÓN:** Fase 6 - Crear entidad TareaClinica con 3 relaciones @ManyToOne
+**ESTADO:** Fase 6 COMPLETADA - 58/58 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + TareaClinica: 18 + App: 1)
+**PRÓXIMA ACCIÓN:** Fase 7 - Spring Security con RBAC (ENFERMERIA, MEDICINA, SUPERVISOR)

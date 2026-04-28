@@ -540,10 +540,17 @@ mvn test
 
 ### Completado:
 - ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
-- ✅ Fase 4 parcial: Paciente (código completo, tests pendientes)
+- ✅ Fase 4: Paciente completo (Entity, Repository, Service, Controller, Tests - 13 tests)
 
 ### Siguiente Paso:
-**Crear tests de Paciente (13 tests)**
+**Fase 5: Crear entidad Usuario con BCrypt**
+1. Crear `PasswordEncoderConfig.java` en config/
+2. Crear Entity `Usuario` con campos: id, nombre, apellidos, username, password (BCrypt), rol
+3. Crear `UsuarioRepository` con `findByUsername`
+4. Crear `UsuarioService` (encriptar password en crear/actualizar)
+5. Crear `UsuarioController` REST
+6. Crear tests (13 tests: RepositoryTest, ServiceTest, ControllerTest)
+7. Commits atómicos
 
 ### Total Tests Esperados al Final:
 - Turno: 13
@@ -582,5 +589,5 @@ mvn test
 ---
 
 **ÚLTIMA ACTUALIZACIÓN:** 28 Abril 2026
-**ESTADO:** Fase 4 en progreso - Tests de Paciente pendientes
-**PRÓXIMA ACCIÓN:** Crear PacienteRepositoryTest.java
+**ESTADO:** Fase 4 COMPLETADA - 27/27 tests pasando (Turno: 13 + Paciente: 13 + App: 1)
+**PRÓXIMA ACCIÓN:** Fase 5 - Crear entidad Usuario con BCrypt

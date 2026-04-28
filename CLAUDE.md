@@ -541,24 +541,16 @@ mvn test
 ### Completado:
 - ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
 - ✅ Fase 4: Paciente completo (Entity, Repository, Service, Controller, Tests - 13 tests)
+- ✅ Fase 5: Usuario completo (PasswordEncoderConfig, Entity con BCrypt, Repository, Service, Controller, Tests - 13 tests)
 
 ### Siguiente Paso:
-**Fase 5: Crear entidad Usuario con BCrypt**
-1. Crear `PasswordEncoderConfig.java` en config/
-2. Crear Entity `Usuario` con campos: id, nombre, apellidos, username, password (BCrypt), rol
-3. Crear `UsuarioRepository` con `findByUsername`
-4. Crear `UsuarioService` (encriptar password en crear/actualizar)
-5. Crear `UsuarioController` REST
-6. Crear tests (13 tests: RepositoryTest, ServiceTest, ControllerTest)
-7. Commits atómicos
-
-### Total Tests Esperados al Final:
-- Turno: 13
-- Paciente: 13
-- Usuario: 13
-- TareaClinica: 15+
-- Security: 5+
-- **Total: 60+ tests**
+**Fase 6: Crear entidad TareaClinica (la más compleja - 3 relaciones @ManyToOne)**
+1. Entity `TareaClinica` con relaciones: `asignadoA` (Usuario), `paciente` (Paciente), `turno` (Turno)
+2. `TareaClinicaRepository` con: findByPacienteId, findByAsignadoAId, findByTurnoId, findByEstado, findByPrioridad
+3. `TareaClinicaService` con validaciones (comprobar que existen Usuario, Paciente y Turno)
+4. `TareaClinicaController` con endpoints estándar + endpoints de filtro
+5. Tests mínimo 15 (por complejidad de relaciones)
+6. Commits atómicos
 
 ---
 
@@ -589,5 +581,5 @@ mvn test
 ---
 
 **ÚLTIMA ACTUALIZACIÓN:** 28 Abril 2026
-**ESTADO:** Fase 4 COMPLETADA - 27/27 tests pasando (Turno: 13 + Paciente: 13 + App: 1)
-**PRÓXIMA ACCIÓN:** Fase 5 - Crear entidad Usuario con BCrypt
+**ESTADO:** Fase 5 COMPLETADA - 40/40 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + App: 1)
+**PRÓXIMA ACCIÓN:** Fase 6 - Crear entidad TareaClinica con 3 relaciones @ManyToOne

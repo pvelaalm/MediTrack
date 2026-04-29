@@ -535,689 +535,587 @@ mvn test
 **TODOS los tests deben pasar (verde) antes de hacer commit.**
 
 ---
-
 ## 📊 PROGRESO ACTUAL
 
 ### Completado:
 - ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
 - ✅ Fase 4: Paciente completo (13 tests)
 - ✅ Fase 5: Usuario con BCrypt (13 tests)
-- ✅ Fase 6: TareaClinica con 3 relaciones @ManyToOne (18 tests)
+- ✅ Fase 6: TareaClinica con relaciones (18 tests)
+- ✅ Fase 7: Spring Security con RBAC (8 tests)
 
-### Siguiente Paso:
-**Fase 7: Spring Security con RBAC**
-1. Crear `SecurityConfig.java` con roles: ENFERMERIA, MEDICINA, SUPERVISOR
-2. Endpoint protegidos según rol (ver CLAUDE.md Fase 7)
-3. Login personalizado
-4. Tests de seguridad (5+ tests)
-5. Commits atómicos
+### En Progreso:
+- 🔄 Fase 8: Vistas Thymeleaf
 
 ### Total Tests Actual:
 - Turno: 13/13 ✅
 - Paciente: 13/13 ✅
 - Usuario: 13/13 ✅
 - TareaClinica: 18/18 ✅
-- **Total: 58/58** ✅ (incluyendo App: 1)
+- Security: 8/8 ✅
+- App: 1/1 ✅
+- **Total: 66/66** ✅
 
 ---
 
 ## 🎯 SIGUIENTE PASO INMEDIATO
 
-### FASE 6 - TAREACLINICA CON RELACIONES @ManyToOne
+### FASE 7 - SPRING SECURITY CON RBAC (Role-Based Access Control)
 
-**ESTA ES LA ENTIDAD MÁS COMPLEJA DEL PROYECTO**
+**Objetivo:** Configurar autenticación y autorización por roles para proteger endpoints según el rol del usuario.
 
-**Complejidad:**
-- 3 relaciones @ManyToOne (Usuario, Paciente, Turno)
-- Validaciones de existencia de relaciones
-- Métodos de búsqueda con filtros
-- Tests más extensos (mínimo 18 tests)
+---
+
+### ROLES Y PERMISOS
+
+#### Rol: ENFERMERIA
+- ✅ Ver tareas asignadas a ellos (GET /api/tareas/usuario/{id})
+- ✅ Actualizar estado de sus tareas (PUT /api/tareas/{id})
+- ✅ Ver información de pacientes (GET /api/pacientes)
+- ❌ NO puede crear tareas
+- ❌ NO puede asignar tareas a otros
+- ❌ NO puede eliminar tareas
+
+#### Rol: MEDICINA
+- ✅ Crear tareas clínicas (POST /api/tareas)
+- ✅ Asignar tareas a enfermería (POST /api/tareas con usuario asignado)
+- ✅ Ver todas las tareas (GET /api/tareas)
+- ✅ Ver pacientes (GET /api/pacientes)
+- ✅ Crear pacientes (POST /api/pacientes)
+- ❌ NO puede eliminar usuarios
+- ❌ NO puede reasignar tareas ya asignadas
+
+#### Rol: SUPERVISOR
+- ✅ TODO: acceso completo a todos los endpoints
+- ✅ Ver carga de trabajo (GET /api/tareas/turno/{id})
+- ✅ Reasignar tareas (PUT /api/tareas/{id})
+- ✅ Gestionar usuarios (CRUD /api/usuarios)
+- ✅ Eliminar tareas si es necesario
 
 ---
 
 ### ACCIÓN REQUERIDA:
 
-#### 1. **Crear Entity TareaClinica.java**
+#### 1. **Crear SecurityConfig.java**
 
-**Ubicación:** `src/main/java/com/hospital/meditrack/model/entity/TareaClinica.java`
+**Ubicación:** `src/main/java/com/hospital/meditrack/config/SecurityConfig.java`
 
 **Estructura:**
 
 ```java
-package com.hospital.meditrack.model.entity;
+package com.hospital.meditrack.config;
 
-import com.hospital.meditrack.model.enums.EstadoTarea;
-import com.hospital.meditrack.model.enums.Prioridad;
-import com.hospital.meditrack.model.enums.TipoTarea;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
 
-import java.time.LocalDateTime;
+import static org.springframework.security.config.Customizer.withDefaults;
 
-@Entity
-@Table(name = "tarea_clinica")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class TareaClinica {
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(nullable = false, length = 500)
-    private String descripcion;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TipoTarea tipo;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Prioridad prioridad;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private EstadoTarea estado;
-    
-    @Column(nullable = false)
-    private LocalDateTime fecha;
-    
-    @Column(length = 1000)
-    private String observaciones;
-    
-    // RELACIONES
-    @ManyToOne
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario asignadoA;
-    
-    @ManyToOne
-    @JoinColumn(name = "paciente_id", nullable = false)
-    private Paciente paciente;
-    
-    @ManyToOne
-    @JoinColumn(name = "turno_id", nullable = false)
-    private Turno turno;
-}
-```
-
-**IMPORTANTE:**
-- Las 3 relaciones son `nullable = false` (obligatorias)
-- Los enums se mapean como STRING (no ORDINAL)
-- LocalDateTime para fecha (no LocalDate)
-
----
-
-#### 2. **Crear TareaClinicaRepository.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/repository/TareaClinicaRepository.java`
-
-**Métodos custom necesarios:**
-
-```java
-package com.hospital.meditrack.repository;
-
-import com.hospital.meditrack.model.entity.TareaClinica;
-import com.hospital.meditrack.model.enums.EstadoTarea;
-import com.hospital.meditrack.model.enums.Prioridad;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
-
-@Repository
-public interface TareaClinicaRepository extends JpaRepository<TareaClinica, Long> {
-    
-    // Buscar por relaciones
-    List<TareaClinica> findByPacienteId(Long pacienteId);
-    List<TareaClinica> findByAsignadoAId(Long usuarioId);
-    List<TareaClinica> findByTurnoId(Long turnoId);
-    
-    // Buscar por enums
-    List<TareaClinica> findByEstado(EstadoTarea estado);
-    List<TareaClinica> findByPrioridad(Prioridad prioridad);
-    
-    // Combinaciones útiles
-    List<TareaClinica> findByAsignadoAIdAndEstado(Long usuarioId, EstadoTarea estado);
-    List<TareaClinica> findByTurnoIdAndEstado(Long turnoId, EstadoTarea estado);
-}
-```
-
----
-
-#### 3. **Crear TareaClinicaService.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/service/TareaClinicaService.java`
-
-**VALIDACIONES CRÍTICAS:**
-
-```java
-package com.hospital.meditrack.service;
-
-import com.hospital.meditrack.model.entity.TareaClinica;
-import com.hospital.meditrack.model.enums.EstadoTarea;
-import com.hospital.meditrack.model.enums.Prioridad;
-import com.hospital.meditrack.repository.TareaClinicaRepository;
-import com.hospital.meditrack.repository.UsuarioRepository;
-import com.hospital.meditrack.repository.PacienteRepository;
-import com.hospital.meditrack.repository.TurnoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
-
-@Service
-public class TareaClinicaService {
-    
-    @Autowired
-    private TareaClinicaRepository tareaRepository;
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private PacienteRepository pacienteRepository;
-    
-    @Autowired
-    private TurnoRepository turnoRepository;
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerTodas() {
-        return tareaRepository.findAll();
-    }
-    
-    @Transactional(readOnly = true)
-    public Optional<TareaClinica> obtenerPorId(Long id) {
-        return tareaRepository.findById(id);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerPorPaciente(Long pacienteId) {
-        return tareaRepository.findByPacienteId(pacienteId);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerPorUsuario(Long usuarioId) {
-        return tareaRepository.findByAsignadoAId(usuarioId);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerPorTurno(Long turnoId) {
-        return tareaRepository.findByTurnoId(turnoId);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerPorEstado(EstadoTarea estado) {
-        return tareaRepository.findByEstado(estado);
-    }
-    
-    @Transactional(readOnly = true)
-    public List<TareaClinica> obtenerPorPrioridad(Prioridad prioridad) {
-        return tareaRepository.findByPrioridad(prioridad);
-    }
-    
-    @Transactional
-    public TareaClinica crear(TareaClinica tarea) {
-        // VALIDAR que existan las relaciones
-        if (tarea.getAsignadoA() == null || tarea.getAsignadoA().getId() == null) {
-            throw new IllegalArgumentException("Debe asignar la tarea a un usuario");
-        }
-        if (tarea.getPaciente() == null || tarea.getPaciente().getId() == null) {
-            throw new IllegalArgumentException("Debe asociar la tarea a un paciente");
-        }
-        if (tarea.getTurno() == null || tarea.getTurno().getId() == null) {
-            throw new IllegalArgumentException("Debe asociar la tarea a un turno");
-        }
-        
-        // Verificar que existan en BD
-        if (!usuarioRepository.existsById(tarea.getAsignadoA().getId())) {
-            throw new IllegalArgumentException("El usuario asignado no existe");
-        }
-        if (!pacienteRepository.existsById(tarea.getPaciente().getId())) {
-            throw new IllegalArgumentException("El paciente no existe");
-        }
-        if (!turnoRepository.existsById(tarea.getTurno().getId())) {
-            throw new IllegalArgumentException("El turno no existe");
-        }
-        
-        return tareaRepository.save(tarea);
-    }
-    
-    @Transactional
-    public TareaClinica actualizar(Long id, TareaClinica tareaActualizada) {
-        return tareaRepository.findById(id)
-            .map(tarea -> {
-                tarea.setDescripcion(tareaActualizada.getDescripcion());
-                tarea.setTipo(tareaActualizada.getTipo());
-                tarea.setPrioridad(tareaActualizada.getPrioridad());
-                tarea.setEstado(tareaActualizada.getEstado());
-                tarea.setFecha(tareaActualizada.getFecha());
-                tarea.setObservaciones(tareaActualizada.getObservaciones());
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())  // Desactivar CSRF para API REST
+            .authorizeHttpRequests(auth -> auth
+                // Endpoints públicos (ninguno por ahora)
                 
-                // Actualizar relaciones si se proporcionan
-                if (tareaActualizada.getAsignadoA() != null) {
-                    if (!usuarioRepository.existsById(tareaActualizada.getAsignadoA().getId())) {
-                        throw new IllegalArgumentException("El usuario asignado no existe");
-                    }
-                    tarea.setAsignadoA(tareaActualizada.getAsignadoA());
-                }
-                if (tareaActualizada.getPaciente() != null) {
-                    if (!pacienteRepository.existsById(tareaActualizada.getPaciente().getId())) {
-                        throw new IllegalArgumentException("El paciente no existe");
-                    }
-                    tarea.setPaciente(tareaActualizada.getPaciente());
-                }
-                if (tareaActualizada.getTurno() != null) {
-                    if (!turnoRepository.existsById(tareaActualizada.getTurno().getId())) {
-                        throw new IllegalArgumentException("El turno no existe");
-                    }
-                    tarea.setTurno(tareaActualizada.getTurno());
-                }
+                // TURNOS - Todos los roles pueden ver
+                .requestMatchers(HttpMethod.GET, "/api/turnos/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.POST, "/api/turnos/**").hasRole("SUPERVISOR")
+                .requestMatchers(HttpMethod.PUT, "/api/turnos/**").hasRole("SUPERVISOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/turnos/**").hasRole("SUPERVISOR")
                 
-                return tareaRepository.save(tarea);
-            })
-            .orElseThrow(() -> new IllegalArgumentException("No se encontró la tarea con ID: " + id));
-    }
-    
-    @Transactional
-    public void eliminar(Long id) {
-        tareaRepository.deleteById(id);
+                // PACIENTES
+                .requestMatchers(HttpMethod.GET, "/api/pacientes/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.POST, "/api/pacientes/**").hasAnyRole("MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.PUT, "/api/pacientes/**").hasAnyRole("MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/pacientes/**").hasRole("SUPERVISOR")
+                
+                // USUARIOS - Solo SUPERVISOR puede gestionar
+                .requestMatchers("/api/usuarios/**").hasRole("SUPERVISOR")
+                
+                // TAREAS
+                .requestMatchers(HttpMethod.GET, "/api/tareas/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.POST, "/api/tareas/**").hasAnyRole("MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.PUT, "/api/tareas/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/tareas/**").hasRole("SUPERVISOR")
+                
+                // Cualquier otra petición requiere autenticación
+                .anyRequest().authenticated()
+            )
+            .httpBasic(withDefaults());  // Autenticación HTTP Basic para API
+        
+        return http.build();
     }
 }
 ```
 
 **NOTAS IMPORTANTES:**
-- Validar existencia de Usuario, Paciente y Turno ANTES de guardar
-- Usar `existsById()` para verificar
-- Mensajes de error descriptivos
+- CSRF desactivado (API REST stateless)
+- HTTP Basic para autenticación (username:password en headers)
+- Roles SIN prefijo "ROLE_" en hasRole() (Spring lo añade automáticamente)
+- `.hasAnyRole()` para múltiples roles
+- `.hasRole()` para un solo rol
 
 ---
 
-#### 4. **Crear TareaClinicaController.java**
+#### 2. **Crear CustomUserDetailsService.java**
 
-**Ubicación:** `src/main/java/com/hospital/meditrack/controller/TareaClinicaController.java`
+**Ubicación:** `src/main/java/com/hospital/meditrack/config/CustomUserDetailsService.java`
 
-**Endpoints necesarios:**
+**Implementación:**
 
 ```java
-package com.hospital.meditrack.controller;
+package com.hospital.meditrack.config;
 
-import com.hospital.meditrack.model.entity.TareaClinica;
-import com.hospital.meditrack.model.enums.EstadoTarea;
-import com.hospital.meditrack.model.enums.Prioridad;
-import com.hospital.meditrack.service.TareaClinicaService;
+import com.hospital.meditrack.model.entity.Usuario;
+import com.hospital.meditrack.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Collections;
 
-@RestController
-@RequestMapping("/api/tareas")
-public class TareaClinicaController {
+/**
+ * Servicio personalizado para cargar usuarios desde la base de datos.
+ * Spring Security lo usa para autenticación.
+ */
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
     
     @Autowired
-    private TareaClinicaService tareaService;
+    private UsuarioRepository usuarioRepository;
     
-    // GET /api/tareas
-    @GetMapping
-    public ResponseEntity<List<TareaClinica>> obtenerTodas() {
-        List<TareaClinica> tareas = tareaService.obtenerTodas();
-        return ResponseEntity.ok(tareas);
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Usuario usuario = usuarioRepository.findByUsername(username)
+            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+        
+        // Convertir el rol del enum a GrantedAuthority
+        // Spring Security añade automáticamente el prefijo "ROLE_"
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name());
+        
+        return new User(
+            usuario.getUsername(),
+            usuario.getPassword(),  // Ya está encriptado con BCrypt
+            Collections.singletonList(authority)
+        );
     }
-    
-    // GET /api/tareas/{id}
-    @GetMapping("/{id}")
-    public ResponseEntity<TareaClinica> obtenerPorId(@PathVariable Long id) {
-        return tareaService.obtenerPorId(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
-    
-    // GET /api/tareas/paciente/{pacienteId}
-    @GetMapping("/paciente/{pacienteId}")
-    public ResponseEntity<List<TareaClinica>> obtenerPorPaciente(@PathVariable Long pacienteId) {
-        List<TareaClinica> tareas = tareaService.obtenerPorPaciente(pacienteId);
-        return ResponseEntity.ok(tareas);
-    }
-    
-    // GET /api/tareas/usuario/{usuarioId}
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<TareaClinica>> obtenerPorUsuario(@PathVariable Long usuarioId) {
-        List<TareaClinica> tareas = tareaService.obtenerPorUsuario(usuarioId);
-        return ResponseEntity.ok(tareas);
-    }
-    
-    // GET /api/tareas/turno/{turnoId}
-    @GetMapping("/turno/{turnoId}")
-    public ResponseEntity<List<TareaClinica>> obtenerPorTurno(@PathVariable Long turnoId) {
-        List<TareaClinica> tareas = tareaService.obtenerPorTurno(turnoId);
-        return ResponseEntity.ok(tareas);
-    }
-    
-    // GET /api/tareas/estado/{estado}
-    @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<TareaClinica>> obtenerPorEstado(@PathVariable EstadoTarea estado) {
-        List<TareaClinica> tareas = tareaService.obtenerPorEstado(estado);
-        return ResponseEntity.ok(tareas);
-    }
-    
-    // GET /api/tareas/prioridad/{prioridad}
-    @GetMapping("/prioridad/{prioridad}")
-    public ResponseEntity<List<TareaClinica>> obtenerPorPrioridad(@PathVariable Prioridad prioridad) {
-        List<TareaClinica> tareas = tareaService.obtenerPorPrioridad(prioridad);
-        return ResponseEntity.ok(tareas);
-    }
-    
-    // POST /api/tareas
-    @PostMapping
-    public ResponseEntity<TareaClinica> crear(@RequestBody TareaClinica tarea) {
-        try {
-            TareaClinica tareaCreada = tareaService.crear(tarea);
-            return ResponseEntity.status(HttpStatus.CREATED).body(tareaCreada);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-    
-    // PUT /api/tareas/{id}
-    @PutMapping("/{id}")
-    public ResponseEntity<TareaClinica> actualizar(
-            @PathVariable Long id, 
-            @RequestBody TareaClinica tarea) {
-        try {
-            TareaClinica tareaActualizada = tareaService.actualizar(id, tarea);
-            return ResponseEntity.ok(tareaActualizada);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-    
-    // DELETE /api/tareas/{id}
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        tareaService.eliminar(id);
-        return ResponseEntity.noContent().build();
+}
+```
+
+**IMPORTANTE:**
+- El password ya está encriptado (BCrypt desde Fase 5)
+- El prefijo "ROLE_" se añade aquí manualmente
+- Devuelve un objeto `UserDetails` de Spring Security
+
+---
+
+#### 3. **Actualizar PasswordEncoderConfig.java**
+
+**Ya existe desde Fase 5, NO modificar.**
+
+Verificar que existe:
+```java
+@Configuration
+public class PasswordEncoderConfig {
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
 ```
 
 ---
 
-#### 5. **Crear Tests (18 tests total)**
+#### 4. **Crear DataLoader.java (Datos de Prueba)**
 
-**Tests más complejos por las relaciones:**
+**Ubicación:** `src/main/java/com/hospital/meditrack/config/DataLoader.java`
 
-##### A. TareaClinicaRepositoryTest.java (3 tests)
+**Para crear usuarios de prueba al arrancar la app:**
 
 ```java
-package com.hospital.meditrack;
+package com.hospital.meditrack.config;
 
-import com.hospital.meditrack.model.entity.*;
-import com.hospital.meditrack.model.enums.*;
-import com.hospital.meditrack.repository.*;
-import org.junit.jupiter.api.Test;
+import com.hospital.meditrack.model.entity.Usuario;
+import com.hospital.meditrack.model.enums.Rol;
+import com.hospital.meditrack.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-
-@SpringBootTest
-@Transactional
-@TestPropertySource(locations = "classpath:application-test.properties")
-class TareaClinicaRepositoryTest {
-    
-    @Autowired
-    private TareaClinicaRepository tareaRepository;
+/**
+ * Carga usuarios de prueba al arrancar la aplicación.
+ * SOLO para desarrollo/pruebas.
+ */
+@Component
+public class DataLoader implements CommandLineRunner {
     
     @Autowired
     private UsuarioRepository usuarioRepository;
     
     @Autowired
-    private PacienteRepository pacienteRepository;
+    private PasswordEncoder passwordEncoder;
     
-    @Autowired
-    private TurnoRepository turnoRepository;
-    
-    @Test
-    void deberiaGuardarYRecuperarTareaConRelaciones() {
-        // Arrange - Crear datos relacionados
-        Turno turno = crearTurno();
-        Usuario usuario = crearUsuario();
-        Paciente paciente = crearPaciente();
-        
-        TareaClinica tarea = new TareaClinica();
-        tarea.setDescripcion("Administrar medicación");
-        tarea.setTipo(TipoTarea.MEDICACION);
-        tarea.setPrioridad(Prioridad.ALTA);
-        tarea.setEstado(EstadoTarea.PENDIENTE);
-        tarea.setFecha(LocalDateTime.now());
-        tarea.setAsignadoA(usuario);
-        tarea.setPaciente(paciente);
-        tarea.setTurno(turno);
-        
-        // Act
-        TareaClinica tareaGuardada = tareaRepository.save(tarea);
-        
-        // Assert
-        assertNotNull(tareaGuardada.getId());
-        assertEquals("Administrar medicación", tareaGuardada.getDescripcion());
-        assertEquals(usuario.getId(), tareaGuardada.getAsignadoA().getId());
-        assertEquals(paciente.getId(), tareaGuardada.getPaciente().getId());
-        assertEquals(turno.getId(), tareaGuardada.getTurno().getId());
-    }
-    
-    @Test
-    void deberiaBuscarTareasPorPaciente() {
-        // Arrange
-        Turno turno = crearTurno();
-        Usuario usuario = crearUsuario();
-        Paciente paciente = crearPaciente();
-        
-        TareaClinica tarea1 = crearTarea(usuario, paciente, turno, "Tarea 1");
-        TareaClinica tarea2 = crearTarea(usuario, paciente, turno, "Tarea 2");
-        
-        // Act
-        List<TareaClinica> tareas = tareaRepository.findByPacienteId(paciente.getId());
-        
-        // Assert
-        assertEquals(2, tareas.size());
-    }
-    
-    @Test
-    void deberiaBuscarTareasPorEstado() {
-        // Arrange
-        Turno turno = crearTurno();
-        Usuario usuario = crearUsuario();
-        Paciente paciente = crearPaciente();
-        
-        TareaClinica tarea = crearTarea(usuario, paciente, turno, "Tarea pendiente");
-        tarea.setEstado(EstadoTarea.PENDIENTE);
-        tareaRepository.save(tarea);
-        
-        // Act
-        List<TareaClinica> tareas = tareaRepository.findByEstado(EstadoTarea.PENDIENTE);
-        
-        // Assert
-        assertTrue(tareas.size() >= 1);
-        assertTrue(tareas.stream().anyMatch(t -> t.getDescripcion().equals("Tarea pendiente")));
-    }
-    
-    // Métodos helper
-    private Turno crearTurno() {
-        Turno turno = new Turno();
-        turno.setNombre("Mañana-Test-" + System.currentTimeMillis());
-        turno.setHoraInicio(LocalTime.of(7, 0));
-        turno.setHoraFin(LocalTime.of(15, 0));
-        return turnoRepository.save(turno);
-    }
-    
-    private Usuario crearUsuario() {
-        Usuario usuario = new Usuario();
-        usuario.setNombre("Test");
-        usuario.setApellidos("Usuario");
-        usuario.setUsername("test-" + System.currentTimeMillis());
-        usuario.setPassword("password");
-        usuario.setRol(Rol.ENFERMERIA);
-        return usuarioRepository.save(usuario);
-    }
-    
-    private Paciente crearPaciente() {
-        Paciente paciente = new Paciente();
-        paciente.setNombre("Juan");
-        paciente.setApellidos("Pérez");
-        paciente.setFechaNacimiento(LocalDate.of(1990, 1, 1));
-        paciente.setNumeroHistoriaClinica("HC-" + System.currentTimeMillis());
-        paciente.setHabitacion("101");
-        return pacienteRepository.save(paciente);
-    }
-    
-    private TareaClinica crearTarea(Usuario usuario, Paciente paciente, Turno turno, String descripcion) {
-        TareaClinica tarea = new TareaClinica();
-        tarea.setDescripcion(descripcion);
-        tarea.setTipo(TipoTarea.MEDICACION);
-        tarea.setPrioridad(Prioridad.MEDIA);
-        tarea.setEstado(EstadoTarea.PENDIENTE);
-        tarea.setFecha(LocalDateTime.now());
-        tarea.setAsignadoA(usuario);
-        tarea.setPaciente(paciente);
-        tarea.setTurno(turno);
-        return tareaRepository.save(tarea);
+    @Override
+    public void run(String... args) throws Exception {
+        // Solo crear si no existen usuarios
+        if (usuarioRepository.count() == 0) {
+            
+            // Usuario ENFERMERIA
+            Usuario enfermera = new Usuario();
+            enfermera.setNombre("Ana");
+            enfermera.setApellidos("García López");
+            enfermera.setUsername("enfermera");
+            enfermera.setPassword(passwordEncoder.encode("enfermera123"));
+            enfermera.setRol(Rol.ENFERMERIA);
+            usuarioRepository.save(enfermera);
+            
+            // Usuario MEDICINA
+            Usuario medico = new Usuario();
+            medico.setNombre("Carlos");
+            medico.setApellidos("Martínez Ruiz");
+            medico.setUsername("medico");
+            medico.setPassword(passwordEncoder.encode("medico123"));
+            medico.setRol(Rol.MEDICINA);
+            usuarioRepository.save(medico);
+            
+            // Usuario SUPERVISOR
+            Usuario supervisor = new Usuario();
+            supervisor.setNombre("Laura");
+            supervisor.setApellidos("Fernández Sánchez");
+            supervisor.setUsername("supervisor");
+            supervisor.setPassword(passwordEncoder.encode("supervisor123"));
+            supervisor.setRol(Rol.SUPERVISOR);
+            usuarioRepository.save(supervisor);
+            
+            System.out.println("✅ Usuarios de prueba creados:");
+            System.out.println("   - enfermera / enfermera123 (ENFERMERIA)");
+            System.out.println("   - medico / medico123 (MEDICINA)");
+            System.out.println("   - supervisor / supervisor123 (SUPERVISOR)");
+        }
     }
 }
 ```
 
-##### B. TareaClinicaServiceTest.java (7 tests con Mockito)
-
-Incluir tests:
-1. `deberiaObtenerTodas`
-2. `deberiaObtenerPorId`
-3. `deberiaCrearTareaConRelacionesValidas`
-4. `noDeberiaCrearTareaSinUsuario`
-5. `noDeberiaCrearTareaSinPaciente`
-6. `noDeberiaCrearTareaSinTurno`
-7. `deberiaActualizarTarea`
-
-##### C. TareaClinicaControllerTest.java (8 tests integración)
-
-Incluir tests:
-1. `deberiaObtenerTodasLasTareas`
-2. `deberiaObtenerTareaPorId`
-3. `deberiaObtenerTareasPorPaciente`
-4. `deberiaObtenerTareasPorUsuario`
-5. `deberiaCrearNuevaTarea`
-6. `noDeberiaCrearTareaSinRelaciones`
-7. `deberiaActualizarTarea`
-8. `deberiaEliminarTarea`
+**NOTAS:**
+- Solo crea usuarios si la tabla está vacía
+- Passwords encriptados con BCrypt
+- Imprime credenciales en consola para pruebas
 
 ---
 
-#### 6. **Commits Atómicos**
+#### 5. **Crear Tests de Seguridad (8 tests)**
 
-1. `feat: Crear entidad TareaClinica con relaciones @ManyToOne`
-2. `feat: Crear TareaClinicaRepository con métodos de búsqueda`
-3. `feat: Crear TareaClinicaService con validaciones de relaciones`
-4. `feat: Crear TareaClinicaController con endpoints de filtros`
-5. `test: Añadir tests de TareaClinicaRepository (3 tests)`
-6. `test: Añadir tests de TareaClinicaService (7 tests)`
-7. `test: Añadir tests de TareaClinicaController (8 tests)`
-8. `feat: Completar Fase 6 - TareaClinica con relaciones`
+##### A. SecurityConfigTest.java (8 tests)
+
+**Ubicación:** `src/test/java/com/hospital/meditrack/SecurityConfigTest.java`
+
+```java
+package com.hospital.meditrack;
+
+import com.hospital.meditrack.model.entity.Usuario;
+import com.hospital.meditrack.model.enums.Rol;
+import com.hospital.meditrack.repository.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+@TestPropertySource(locations = "classpath:application-test.properties")
+class SecurityConfigTest {
+    
+    @Autowired
+    private MockMvc mockMvc;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    @BeforeEach
+    void setUp() {
+        // Crear usuario de prueba si no existe
+        if (usuarioRepository.findByUsername("testuser").isEmpty()) {
+            Usuario usuario = new Usuario();
+            usuario.setNombre("Test");
+            usuario.setApellidos("User");
+            usuario.setUsername("testuser");
+            usuario.setPassword(passwordEncoder.encode("password"));
+            usuario.setRol(Rol.SUPERVISOR);
+            usuarioRepository.save(usuario);
+        }
+    }
+    
+    @Test
+    void deberiaDenegarAccesoSinAutenticacion() throws Exception {
+        mockMvc.perform(get("/api/turnos"))
+            .andExpect(status().isUnauthorized());
+    }
+    
+    @Test
+    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
+    void enfermeriaDeberiaVerTurnos() throws Exception {
+        mockMvc.perform(get("/api/turnos"))
+            .andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
+    void enfermeriaNoDeberiaCrearTurnos() throws Exception {
+        mockMvc.perform(post("/api/turnos"))
+            .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @WithMockUser(username = "medico", roles = "MEDICINA")
+    void medicinaDeberiaCrearPacientes() throws Exception {
+        mockMvc.perform(post("/api/pacientes"))
+            .andExpect(status().isBadRequest());  // BadRequest por validación, no Forbidden
+    }
+    
+    @Test
+    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
+    void enfermeriaNoDeberiaCrearPacientes() throws Exception {
+        mockMvc.perform(post("/api/pacientes"))
+            .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @WithMockUser(username = "supervisor", roles = "SUPERVISOR")
+    void supervisorDeberiaTenerAccesoCompleto() throws Exception {
+        mockMvc.perform(get("/api/usuarios"))
+            .andExpect(status().isOk());
+        
+        mockMvc.perform(get("/api/turnos"))
+            .andExpect(status().isOk());
+        
+        mockMvc.perform(get("/api/pacientes"))
+            .andExpect(status().isOk());
+        
+        mockMvc.perform(get("/api/tareas"))
+            .andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
+    void enfermeriaNoDeberiaAccederAUsuarios() throws Exception {
+        mockMvc.perform(get("/api/usuarios"))
+            .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @WithMockUser(username = "medico", roles = "MEDICINA")
+    void medicinaNoDeberiaAccederAUsuarios() throws Exception {
+        mockMvc.perform(get("/api/usuarios"))
+            .andExpect(status().isForbidden());
+    }
+}
+```
+
+**NOTAS:**
+- `@WithMockUser` simula usuario autenticado con rol
+- `status().isUnauthorized()` = 401 (sin autenticación)
+- `status().isForbidden()` = 403 (autenticado pero sin permisos)
+- `status().isBadRequest()` = 400 (tiene permisos pero datos inválidos)
 
 ---
 
-#### 7. **Ejecutar al Terminar**
+#### 6. **Actualizar application.properties**
+
+**Añadir al final de `src/main/resources/application.properties`:**
+
+```properties
+# Spring Security
+spring.security.user.name=admin
+spring.security.user.password=admin123
+spring.security.user.roles=SUPERVISOR
+
+# Logging de seguridad (para debug)
+logging.level.org.springframework.security=DEBUG
+```
+
+**NOTA:** Estas son credenciales por defecto si no hay usuarios en BD. DataLoader las sobrescribe.
+
+---
+
+#### 7. **Commits Atómicos**
+
+1. `config: Crear SecurityConfig con RBAC por roles`
+2. `config: Crear CustomUserDetailsService para autenticación desde BD`
+3. `config: Crear DataLoader con usuarios de prueba`
+4. `test: Añadir tests de seguridad (8 tests)`
+5. `docs: Actualizar README con credenciales de prueba`
+6. `feat: Completar Fase 7 - Spring Security con RBAC`
+
+---
+
+#### 8. **Ejecutar al Terminar**
 
 ```bash
 mvn test
 ```
 
 **Resultado esperado:**
-- Tests TareaClinica: 18/18 ✅
-- **TOTAL PROYECTO: 57/57** ✅
+- Tests Security: 8/8 ✅
+- **TOTAL PROYECTO: 65/65** ✅
    - Turno: 13
    - Paciente: 13
    - Usuario: 13
    - TareaClinica: 18
+   - Security: 8
+
+---
+
+### 📋 VERIFICACIÓN MANUAL POST-IMPLEMENTACIÓN
+
+#### Arrancar la aplicación:
+```bash
+mvn spring-boot:run
+```
+
+#### Probar autenticación con curl:
+
+**1. Sin autenticación (debe fallar):**
+```bash
+curl http://localhost:8080/api/turnos
+# Resultado esperado: 401 Unauthorized
+```
+
+**2. Con usuario ENFERMERIA:**
+```bash
+curl -u enfermera:enfermera123 http://localhost:8080/api/turnos
+# Resultado esperado: 200 OK con lista de turnos
+
+curl -u enfermera:enfermera123 -X POST http://localhost:8080/api/turnos
+# Resultado esperado: 403 Forbidden (no tiene permiso)
+```
+
+**3. Con usuario MEDICINA:**
+```bash
+curl -u medico:medico123 http://localhost:8080/api/pacientes
+# Resultado esperado: 200 OK
+
+curl -u medico:medico123 http://localhost:8080/api/usuarios
+# Resultado esperado: 403 Forbidden (solo SUPERVISOR)
+```
+
+**4. Con usuario SUPERVISOR:**
+```bash
+curl -u supervisor:supervisor123 http://localhost:8080/api/usuarios
+# Resultado esperado: 200 OK
+
+curl -u supervisor:supervisor123 -X DELETE http://localhost:8080/api/turnos/1
+# Resultado esperado: 204 No Content
+```
 
 ---
 
 ### ⚠️ CONSIDERACIONES ESPECIALES
 
-**1. Referencias Circulares en JSON:**
+**1. CSRF en Thymeleaf (Fase 8):**
 
-Las relaciones bidireccionales pueden causar loops infinitos al serializar JSON.
-
-**Solución:** Usar `@JsonIgnoreProperties` en las relaciones:
-
+Cuando se implementen vistas Thymeleaf, reactivar CSRF:
 ```java
-@ManyToOne
-@JoinColumn(name = "usuario_id")
-@JsonIgnoreProperties({"password", "hibernateLazyInitializer", "handler"})
-private Usuario asignadoA;
+.csrf(csrf -> csrf
+    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+)
 ```
 
-**2. Lazy Loading en Tests:**
+**2. Logging de Seguridad:**
 
-Si hay errores de lazy loading:
-```java
-@ManyToOne(fetch = FetchType.EAGER)  // Solo si es necesario
+Si hay problemas, activar logs en `application.properties`:
+```properties
+logging.level.org.springframework.security=TRACE
 ```
 
-**3. Validaciones en Service:**
+**3. Excepciones Personalizadas:**
 
-SIEMPRE validar que las relaciones existan antes de guardar:
-```java
-if (!usuarioRepository.existsById(tarea.getAsignadoA().getId())) {
-    throw new IllegalArgumentException("El usuario no existe");
-}
-```
+Para respuestas JSON en errores de seguridad, crear `AccessDeniedHandler` personalizado (opcional para Fase 7).
 
 ---
 
-### 📋 CHECKLIST FASE 6
+### 🎯 RESUMEN FASE 7
+
+**Implementa:**
+- ✅ Autenticación HTTP Basic
+- ✅ Autorización RBAC (3 roles)
+- ✅ UserDetailsService desde BD
+- ✅ Usuarios de prueba automáticos
+- ✅ Tests de seguridad (8 tests)
+
+**Protege:**
+- ✅ Endpoints por método HTTP
+- ✅ Endpoints por rol
+- ✅ Datos sensibles (passwords)
+
+**Permite:**
+- ✅ ENFERMERIA: Ver y actualizar sus tareas
+- ✅ MEDICINA: Crear tareas y pacientes
+- ✅ SUPERVISOR: Acceso completo
+
+---
+
+### 📦 CHECKLIST FASE 7
 
 Antes de ejecutar:
-- [ ] CLAUDE.md actualizado
+- [ ] CLAUDE.md actualizado con instrucciones Fase 7
 - [ ] Commit de CLAUDE.md realizado
 
 Después de ejecutar:
-- [ ] 18 tests de TareaClinica pasando
-- [ ] Total proyecto: 57/57 tests
-- [ ] 8 commits atómicos en GitHub
-- [ ] API funcional en `/api/tareas`
+- [ ] SecurityConfig.java creado
+- [ ] CustomUserDetailsService.java creado
+- [ ] DataLoader.java creado
+- [ ] 8 tests de seguridad pasando
+- [ ] Total proyecto: 65/65 tests
+- [ ] 6 commits atómicos en GitHub
+- [ ] Usuarios de prueba funcionando
 
 ---
 
-**¿LISTO PARA EJECUTAR?**
-
-Una vez actualizado `CLAUDE.md`, haz:
+## PASO 3: Hacer Commit del CLAUDE.md Actualizado
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: Actualizar CLAUDE.md para Fase 6 - TareaClinica con relaciones
+git commit -m "docs: Actualizar CLAUDE.md para Fase 7 - Spring Security con RBAC
 
-- Definir entidad con 3 relaciones @ManyToOne
-- Especificar validaciones de existencia de relaciones
-- Detallar endpoints con filtros múltiples
-- Definir 18 tests (Repository 3, Service 7, Controller 8)
-- Total esperado: 57/57 tests"
+- Configuración de autenticación HTTP Basic
+- Autorización por roles (ENFERMERIA, MEDICINA, SUPERVISOR)
+- UserDetailsService personalizado desde BD
+- DataLoader con usuarios de prueba
+- Tests de seguridad (8 tests)
+- Total esperado: 65/65 tests"
 
 git push origin main
 ```
 
-Luego en **Claude Code**:
+---
+
+
 
 ## 🎯 INSTRUCCIÓN PRINCIPAL
 
@@ -1245,6 +1143,6 @@ Luego en **Claude Code**:
 
 ---
 
-**ÚLTIMA ACTUALIZACIÓN:** 28 Abril 2026
-**ESTADO:** Fase 6 COMPLETADA - 58/58 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + TareaClinica: 18 + App: 1)
-**PRÓXIMA ACCIÓN:** Fase 7 - Spring Security con RBAC (ENFERMERIA, MEDICINA, SUPERVISOR)
+**ÚLTIMA ACTUALIZACIÓN:** 29 Abril 2026
+**ESTADO:** Fase 7 COMPLETADA - 66/66 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + TareaClinica: 18 + Security: 8 + App: 1)
+**PRÓXIMA ACCIÓN:** Fase 8 - Vistas Thymeleaf (enfermeria/, medicina/, supervisor/, common/)

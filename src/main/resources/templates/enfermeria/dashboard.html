@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head('Dashboard Enfermería')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/header :: navbar('ENFERMERIA')}"></nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block sidebar py-3">
+            <div class="position-sticky">
+                <ul class="nav flex-column px-2">
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semibold" th:href="@{/enfermeria/dashboard}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/enfermeria/mis-tareas}">
+                            <i class="bi bi-list-check me-2"></i>Mis Tareas
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="col-md-10 content-area">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0">
+                        <i class="bi bi-heart-pulse text-primary me-2"></i>Dashboard Enfermería
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Bienvenida/o, <strong th:text="${usuario.nombre + ' ' + usuario.apellidos}">Nombre</strong>
+                    </p>
+                </div>
+                <span class="badge bg-primary fs-6 px-3 py-2">
+                    <i class="bi bi-person-badge me-1"></i>Enfermería
+                </span>
+            </div>
+
+            <!-- Tarjetas de estadísticas -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card stat-card border-start border-primary border-4">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted mb-1 small">Total Tareas Asignadas</p>
+                                <h3 class="fw-bold text-primary mb-0" th:text="${totalTareas}">0</h3>
+                            </div>
+                            <i class="bi bi-clipboard-check text-primary" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card border-start border-warning border-4">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted mb-1 small">Tareas Pendientes</p>
+                                <h3 class="fw-bold text-warning mb-0" th:text="${tareasPendientes}">0</h3>
+                            </div>
+                            <i class="bi bi-clock text-warning" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card border-start border-info border-4">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted mb-1 small">En Curso</p>
+                                <h3 class="fw-bold text-info mb-0" th:text="${tareasEnCurso}">0</h3>
+                            </div>
+                            <i class="bi bi-arrow-clockwise text-info" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tareas recientes -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="bi bi-list-task me-2 text-primary"></i>Tareas Recientes
+                    </h5>
+                    <a th:href="@{/enfermeria/mis-tareas}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-eye me-1"></i>Ver Todas
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div th:if="${#lists.isEmpty(tareas)}" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">No tienes tareas asignadas</p>
+                    </div>
+                    <div th:unless="${#lists.isEmpty(tareas)}" class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Prioridad</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="tarea : ${tareas}">
+                                    <td class="align-middle">
+                                        <strong th:text="${tarea.paciente.nombre + ' ' + tarea.paciente.apellidos}">Paciente</strong>
+                                        <br><small class="text-muted" th:text="'HC: ' + ${tarea.paciente.numeroHistoriaClinica}">HC</small>
+                                    </td>
+                                    <td class="align-middle" th:text="${#strings.abbreviate(tarea.descripcion, 50)}">Desc</td>
+                                    <td class="align-middle"><small class="text-muted" th:text="${tarea.tipo}">Tipo</small></td>
+                                    <td class="align-middle">
+                                        <span class="badge"
+                                              th:classappend="'badge-' + ${tarea.estado}"
+                                              th:text="${tarea.estado}">Estado</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <span class="badge"
+                                              th:classappend="'badge-' + ${tarea.prioridad}"
+                                              th:text="${tarea.prioridad}">Prioridad</span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <small th:text="${#temporals.format(tarea.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-center" th:if="${totalTareas > 5}">
+                    <a th:href="@{/enfermeria/mis-tareas}" class="text-primary text-decoration-none">
+                        <i class="bi bi-arrow-right me-1"></i>Ver las <span th:text="${totalTareas - 5}"></span> tareas restantes
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

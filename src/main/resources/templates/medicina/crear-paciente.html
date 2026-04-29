@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head('Nuevo Paciente')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/header :: navbar('MEDICINA')}"></nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block sidebar py-3">
+            <div class="position-sticky">
+                <ul class="nav flex-column px-2">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/medicina/dashboard}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/medicina/crear-tarea}">
+                            <i class="bi bi-plus-circle me-2"></i>Nueva Tarea
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semibold" th:href="@{/medicina/pacientes}">
+                            <i class="bi bi-people me-2"></i>Pacientes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="col-md-10 content-area">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <a th:href="@{/medicina/pacientes}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h2 class="fw-bold mb-0">
+                    <i class="bi bi-person-plus text-success me-2"></i>Registrar Nuevo Paciente
+                </h2>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form th:action="@{/medicina/crear-paciente}" th:object="${paciente}" method="post">
+
+                        <div class="row g-3">
+                            <!-- Nombre -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1"></i>Nombre <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" th:field="*{nombre}" class="form-control"
+                                       placeholder="Nombre del paciente" required>
+                            </div>
+
+                            <!-- Apellidos -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1"></i>Apellidos <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" th:field="*{apellidos}" class="form-control"
+                                       placeholder="Apellidos del paciente" required>
+                            </div>
+
+                            <!-- Fecha de nacimiento -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-calendar me-1"></i>Fecha de Nacimiento
+                                </label>
+                                <input type="date" th:field="*{fechaNacimiento}" class="form-control">
+                            </div>
+
+                            <!-- Número de Historia Clínica -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-file-medical me-1"></i>N.º Historia Clínica <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" th:field="*{numeroHistoriaClinica}" class="form-control"
+                                       placeholder="Ej: HC-2026-001" required>
+                                <div class="form-text">Debe ser único en el sistema</div>
+                            </div>
+
+                            <!-- Habitación -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-door-open me-1"></i>Habitación
+                                </label>
+                                <input type="text" th:field="*{habitacion}" class="form-control"
+                                       placeholder="Ej: 301-A">
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+                                <a th:href="@{/medicina/pacientes}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-success px-4">
+                                    <i class="bi bi-person-check me-1"></i>Registrar Paciente
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

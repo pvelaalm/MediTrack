@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head('Crear Tarea')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/header :: navbar('MEDICINA')}"></nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block sidebar py-3">
+            <div class="position-sticky">
+                <ul class="nav flex-column px-2">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/medicina/dashboard}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semibold" th:href="@{/medicina/crear-tarea}">
+                            <i class="bi bi-plus-circle me-2"></i>Nueva Tarea
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/medicina/pacientes}">
+                            <i class="bi bi-people me-2"></i>Pacientes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="col-md-10 content-area">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <a th:href="@{/medicina/dashboard}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h2 class="fw-bold mb-0">
+                    <i class="bi bi-plus-circle text-success me-2"></i>Nueva Tarea Clínica
+                </h2>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form th:action="@{/medicina/crear-tarea}" method="post">
+
+                        <div class="row g-3">
+                            <!-- Descripción -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-file-text me-1"></i>Descripción <span class="text-danger">*</span>
+                                </label>
+                                <textarea name="descripcion" class="form-control" rows="3"
+                                          placeholder="Descripción detallada de la tarea clínica..."
+                                          maxlength="500" required></textarea>
+                            </div>
+
+                            <!-- Tipo y Prioridad -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-tag me-1"></i>Tipo de Tarea <span class="text-danger">*</span>
+                                </label>
+                                <select name="tipo" class="form-select" required>
+                                    <option value="">-- Selecciona tipo --</option>
+                                    <option th:each="tipo : ${tiposTarea}"
+                                            th:value="${tipo}"
+                                            th:text="${tipo}">Tipo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Prioridad <span class="text-danger">*</span>
+                                </label>
+                                <select name="prioridad" class="form-select" required>
+                                    <option value="">-- Selecciona prioridad --</option>
+                                    <option th:each="p : ${prioridades}"
+                                            th:value="${p}"
+                                            th:text="${p}">Prioridad</option>
+                                </select>
+                            </div>
+
+                            <!-- Estado y Fecha -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-flag me-1"></i>Estado Inicial <span class="text-danger">*</span>
+                                </label>
+                                <select name="estado" class="form-select" required>
+                                    <option th:each="e : ${estadosTarea}"
+                                            th:value="${e}"
+                                            th:text="${e}"
+                                            th:selected="${e.name() == 'PENDIENTE'}">Estado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-calendar me-1"></i>Fecha y Hora <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" name="fecha" class="form-control" required>
+                            </div>
+
+                            <!-- Paciente -->
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1"></i>Paciente <span class="text-danger">*</span>
+                                </label>
+                                <select name="pacienteId" class="form-select" required>
+                                    <option value="">-- Selecciona paciente --</option>
+                                    <option th:each="p : ${pacientes}"
+                                            th:value="${p.id}"
+                                            th:text="${p.nombre + ' ' + p.apellidos + ' (HC: ' + p.numeroHistoriaClinica + ')'}">Paciente</option>
+                                </select>
+                                <div class="form-text">
+                                    <a th:href="@{/medicina/crear-paciente}" class="text-success">
+                                        <i class="bi bi-plus-circle me-1"></i>Registrar nuevo paciente
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Enfermero asignado -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person-badge me-1"></i>Asignar a Enfermería <span class="text-danger">*</span>
+                                </label>
+                                <select name="usuarioId" class="form-select" required>
+                                    <option value="">-- Selecciona enfermero/a --</option>
+                                    <option th:each="u : ${enfermeros}"
+                                            th:value="${u.id}"
+                                            th:text="${u.nombre + ' ' + u.apellidos}">Enfermero</option>
+                                </select>
+                            </div>
+
+                            <!-- Turno -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-clock me-1"></i>Turno <span class="text-danger">*</span>
+                                </label>
+                                <select name="turnoId" class="form-select" required>
+                                    <option value="">-- Selecciona turno --</option>
+                                    <option th:each="t : ${turnos}"
+                                            th:value="${t.id}"
+                                            th:text="${t.nombre + ' (' + t.horaInicio + ' - ' + t.horaFin + ')'}">Turno</option>
+                                </select>
+                            </div>
+
+                            <!-- Observaciones -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-chat-text me-1"></i>Observaciones <span class="text-muted">(opcional)</span>
+                                </label>
+                                <textarea name="observaciones" class="form-control" rows="2"
+                                          placeholder="Observaciones adicionales..."
+                                          maxlength="1000"></textarea>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+                                <a th:href="@{/medicina/dashboard}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-success px-4">
+                                    <i class="bi bi-check-circle me-1"></i>Crear Tarea
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

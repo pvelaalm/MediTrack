@@ -543,9 +543,10 @@ mvn test
 - ✅ Fase 5: Usuario con BCrypt (13 tests)
 - ✅ Fase 6: TareaClinica con relaciones (18 tests)
 - ✅ Fase 7: Spring Security con RBAC (8 tests)
+- ✅ Fase 8: Vistas Thymeleaf por Rol (sin tests adicionales)
 
 ### En Progreso:
-- 🔄 Fase 8: Vistas Thymeleaf
+- 🔄 Fase 9: Dashboard Supervisor con WebFlux y SSE
 
 ### Total Tests Actual:
 - Turno: 13/13 ✅
@@ -560,560 +561,547 @@ mvn test
 
 ## 🎯 SIGUIENTE PASO INMEDIATO
 
-### FASE 7 - SPRING SECURITY CON RBAC (Role-Based Access Control)
+### FASE 8 - VISTAS THYMELEAF POR ROL
 
-**Objetivo:** Configurar autenticación y autorización por roles para proteger endpoints según el rol del usuario.
-
----
-
-### ROLES Y PERMISOS
-
-#### Rol: ENFERMERIA
-- ✅ Ver tareas asignadas a ellos (GET /api/tareas/usuario/{id})
-- ✅ Actualizar estado de sus tareas (PUT /api/tareas/{id})
-- ✅ Ver información de pacientes (GET /api/pacientes)
-- ❌ NO puede crear tareas
-- ❌ NO puede asignar tareas a otros
-- ❌ NO puede eliminar tareas
-
-#### Rol: MEDICINA
-- ✅ Crear tareas clínicas (POST /api/tareas)
-- ✅ Asignar tareas a enfermería (POST /api/tareas con usuario asignado)
-- ✅ Ver todas las tareas (GET /api/tareas)
-- ✅ Ver pacientes (GET /api/pacientes)
-- ✅ Crear pacientes (POST /api/pacientes)
-- ❌ NO puede eliminar usuarios
-- ❌ NO puede reasignar tareas ya asignadas
-
-#### Rol: SUPERVISOR
-- ✅ TODO: acceso completo a todos los endpoints
-- ✅ Ver carga de trabajo (GET /api/tareas/turno/{id})
-- ✅ Reasignar tareas (PUT /api/tareas/{id})
-- ✅ Gestionar usuarios (CRUD /api/usuarios)
-- ✅ Eliminar tareas si es necesario
+**Objetivo:** Crear interfaces web con Thymeleaf separadas por rol (ENFERMERIA, MEDICINA, SUPERVISOR) con formularios funcionales, navegación intuitiva y diseño responsive con Bootstrap 5.
 
 ---
 
-### ACCIÓN REQUERIDA:
+### ARQUITECTURA DE VISTAS
 
-#### 1. **Crear SecurityConfig.java**
+Crear la siguiente estructura de plantillas Thymeleaf en `src/main/resources/templates/`:
+templates/
+├── login.html                      # Página de login con diseño moderno
+├── index.html                      # Redirige según rol (opcional)
+├── error.html                      # Página de error genérica
+│
+├── fragments/
+│   ├── header.html                 # Header común con navbar Bootstrap y menú por rol
+│   ├── footer.html                 # Footer común (opcional)
+│   └── sidebar.html                # Sidebar común (opcional)
+│
+├── enfermeria/
+│   ├── dashboard.html              # Dashboard con resumen de tareas asignadas
+│   ├── mis-tareas.html             # Lista de tareas con filtros y actualización de estado
+│   └── paciente-detalle.html       # Ver detalles de paciente (opcional)
+│
+├── medicina/
+│   ├── dashboard.html              # Dashboard con estadísticas generales
+│   ├── crear-tarea.html            # Formulario para crear tarea clínica
+│   ├── pacientes.html              # Lista de pacientes
+│   └── crear-paciente.html         # Formulario para crear paciente
+│
+└── supervisor/
+├── dashboard.html              # Dashboard con vista general del sistema
+├── carga-trabajo.html          # Vista de carga por turno
+├── reasignar-tareas.html       # Formulario para reasignar tareas
+└── usuarios.html               # Lista y gestión de usuarios
 
-**Ubicación:** `src/main/java/com/hospital/meditrack/config/SecurityConfig.java`
+---
 
-**Estructura:**
+### FUNCIONALIDADES POR ROL
 
-```java
-package com.hospital.meditrack.config;
+#### ROL: ENFERMERIA
+**Puede:**
+- Ver dashboard con sus tareas asignadas
+- Ver lista completa de sus tareas (filtrar por estado, prioridad)
+- Actualizar estado de tarea (PENDIENTE → EN_CURSO → REALIZADA)
+- Añadir observaciones a tareas
+- Ver información básica de pacientes asociados a sus tareas
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
+**No puede:**
+- Crear tareas
+- Asignar tareas
+- Eliminar tareas
+- Gestionar usuarios
 
-import static org.springframework.security.config.Customizer.withDefaults;
+#### ROL: MEDICINA
+**Puede:**
+- Ver dashboard con estadísticas generales
+- Crear nuevas tareas clínicas (formulario completo)
+- Asignar tareas a personal de enfermería
+- Ver todas las tareas del sistema
+- Crear pacientes (formulario completo)
+- Ver lista de pacientes
 
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-    
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())  // Desactivar CSRF para API REST
-            .authorizeHttpRequests(auth -> auth
-                // Endpoints públicos (ninguno por ahora)
-                
-                // TURNOS - Todos los roles pueden ver
-                .requestMatchers(HttpMethod.GET, "/api/turnos/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.POST, "/api/turnos/**").hasRole("SUPERVISOR")
-                .requestMatchers(HttpMethod.PUT, "/api/turnos/**").hasRole("SUPERVISOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/turnos/**").hasRole("SUPERVISOR")
-                
-                // PACIENTES
-                .requestMatchers(HttpMethod.GET, "/api/pacientes/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.POST, "/api/pacientes/**").hasAnyRole("MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.PUT, "/api/pacientes/**").hasAnyRole("MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/pacientes/**").hasRole("SUPERVISOR")
-                
-                // USUARIOS - Solo SUPERVISOR puede gestionar
-                .requestMatchers("/api/usuarios/**").hasRole("SUPERVISOR")
-                
-                // TAREAS
-                .requestMatchers(HttpMethod.GET, "/api/tareas/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.POST, "/api/tareas/**").hasAnyRole("MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.PUT, "/api/tareas/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/tareas/**").hasRole("SUPERVISOR")
-                
-                // Cualquier otra petición requiere autenticación
-                .anyRequest().authenticated()
-            )
-            .httpBasic(withDefaults());  // Autenticación HTTP Basic para API
-        
-        return http.build();
-    }
-}
+**No puede:**
+- Eliminar usuarios
+- Reasignar tareas ya asignadas (solo SUPERVISOR)
+- Gestionar usuarios del sistema
+
+#### ROL: SUPERVISOR
+**Puede:**
+- Ver dashboard con vista general del sistema
+- Ver carga de trabajo por turno
+- Reasignar tareas entre usuarios
+- Ver lista de todos los usuarios
+- Acceso completo a todas las funcionalidades
+
+---
+
+### ACCIÓN REQUERIDA
+
+#### 1. **Actualizar SecurityConfig.java**
+
+Modificar `src/main/java/com/hospital/meditrack/config/SecurityConfig.java` para añadir:
+
+**Cambios necesarios:**
+- Activar formulario de login con `.formLogin()` en lugar de solo HTTP Basic
+- Definir página de login personalizada: `/login`
+- Configurar logout con redirección a `/login?logout`
+- Permitir acceso público a recursos estáticos (`/css/**`, `/js/**`, `/images/**`, `/webjars/**`)
+- Proteger rutas web por rol:
+   - `/enfermeria/**` → `hasRole("ENFERMERIA")`
+   - `/medicina/**` → `hasRole("MEDICINA")`
+   - `/supervisor/**` → `hasRole("SUPERVISOR")`
+- Permitir acceso a `/login` y `/error` sin autenticación
+- Mantener las reglas de API REST de la Fase 7 (no eliminar)
+- Mantener HTTP Basic para API REST (compatibilidad)
+
+**IMPORTANTE:** Mantener CSRF habilitado (por defecto) para formularios web.
+
+---
+
+#### 2. **Crear WebController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/WebController.java`
+
+**Responsabilidad:** Controlador principal para navegación web (NO REST).
+
+**Endpoints necesarios:**
+- `GET /login` → Devuelve vista "login"
+- `GET /` y `GET /index` → Redirige según rol del usuario autenticado:
+   - ROLE_ENFERMERIA → `redirect:/enfermeria/dashboard`
+   - ROLE_MEDICINA → `redirect:/medicina/dashboard`
+   - ROLE_SUPERVISOR → `redirect:/supervisor/dashboard`
+
+**Nota:** Usar `Authentication` para obtener el rol del usuario.
+
+---
+
+#### 3. **Crear EnfermeriaWebController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/EnfermeriaWebController.java`
+
+**Responsabilidad:** Vistas para el rol ENFERMERIA.
+
+**Endpoints necesarios:**
+
+1. `GET /enfermeria/dashboard`
+   - Obtener usuario autenticado desde `Authentication`
+   - Obtener tareas asignadas al usuario (`tareaService.obtenerPorUsuario()`)
+   - Pasar al modelo: `usuario`, `tareas`, `totalTareas`
+   - Devolver vista: `enfermeria/dashboard`
+
+2. `GET /enfermeria/mis-tareas`
+   - Listar todas las tareas del usuario autenticado
+   - Devolver vista: `enfermeria/mis-tareas`
+
+3. `POST /enfermeria/tareas/{id}/actualizar-estado`
+   - Parámetros: `nuevoEstado` (String), `observaciones` (String, opcional)
+   - Actualizar estado de la tarea
+   - Añadir observaciones si se proporcionan
+   - Redirigir a `/enfermeria/mis-tareas`
+
+---
+
+#### 4. **Crear MedicinaWebController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/MedicinaWebController.java`
+
+**Responsabilidad:** Vistas para el rol MEDICINA.
+
+**Endpoints necesarios:**
+
+1. `GET /medicina/dashboard`
+   - Obtener estadísticas: total tareas, total pacientes
+   - Obtener tareas recientes (últimas 5)
+   - Devolver vista: `medicina/dashboard`
+
+2. `GET /medicina/crear-tarea`
+   - Obtener listas para selects del formulario:
+      - Pacientes (todos)
+      - Usuarios con rol ENFERMERIA
+      - Turnos (todos)
+   - Pasar objeto vacío `new TareaClinica()` para el formulario
+   - Devolver vista: `medicina/crear-tarea`
+
+3. `POST /medicina/crear-tarea`
+   - Recibir `@ModelAttribute TareaClinica tarea`
+   - Llamar a `tareaService.crear(tarea)`
+   - Redirigir a `/medicina/dashboard`
+
+4. `GET /medicina/pacientes`
+   - Listar todos los pacientes
+   - Devolver vista: `medicina/pacientes`
+
+5. `GET /medicina/crear-paciente`
+   - Pasar objeto vacío `new Paciente()`
+   - Devolver vista: `medicina/crear-paciente`
+
+6. `POST /medicina/crear-paciente`
+   - Recibir `@ModelAttribute Paciente paciente`
+   - Llamar a `pacienteService.crear(paciente)`
+   - Redirigir a `/medicina/pacientes`
+
+---
+
+#### 5. **Crear SupervisorWebController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/SupervisorWebController.java`
+
+**Responsabilidad:** Vistas para el rol SUPERVISOR.
+
+**Endpoints necesarios:**
+
+1. `GET /supervisor/dashboard`
+   - Obtener totales: tareas, usuarios, turnos
+   - Devolver vista: `supervisor/dashboard`
+
+2. `GET /supervisor/carga-trabajo`
+   - Obtener todos los turnos
+   - Calcular tareas por turno (Map<String, Long>)
+   - Devolver vista: `supervisor/carga-trabajo`
+
+3. `GET /supervisor/usuarios`
+   - Listar todos los usuarios
+   - Devolver vista: `supervisor/usuarios`
+
+4. `GET /supervisor/reasignar-tareas`
+   - Obtener todas las tareas
+   - Obtener todos los usuarios
+   - Devolver vista: `supervisor/reasignar-tareas`
+
+5. `POST /supervisor/reasignar-tarea/{id}`
+   - Parámetro: `nuevoUsuarioId` (Long)
+   - Obtener tarea por id
+   - Obtener nuevo usuario por id
+   - Actualizar tarea con nuevo usuario asignado
+   - Redirigir a `/supervisor/reasignar-tareas`
+
+---
+
+#### 6. **Crear Vistas HTML con Thymeleaf**
+
+**Tecnologías a usar:**
+- Thymeleaf con sintaxis estándar
+- Bootstrap 5 (CDN: https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)
+- Bootstrap Icons (CDN: https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css)
+- Thymeleaf Security extras para `sec:authorize` (ya incluido en dependencies)
+
+**Requisitos de diseño:**
+- Diseño responsive (mobile-first)
+- Colores coherentes por rol (opcional: enfermería=azul, medicina=verde, supervisor=morado)
+- Navegación clara con navbar Bootstrap
+- Formularios con validación HTML5 (`required`, `type`, etc.)
+- Tablas con clase `table table-hover`
+- Badges para estados (pendiente=warning, en_curso=primary, realizada=success)
+- Badges para prioridades (urgente=danger, alta=warning, media/baja=secondary)
+
+**Vistas a crear (MÍNIMO):**
+
+##### A. login.html
+- Formulario de login centrado
+- Campo username y password
+- Botón "Iniciar Sesión"
+- Mostrar mensaje de error si `param.error` existe
+- Mostrar mensaje de logout si `param.logout` existe
+- Diseño moderno con gradiente o card Bootstrap
+- Incluir usuarios de prueba como texto informativo
+
+##### B. fragments/header.html
+- Fragmento `head` con imports de Bootstrap y Bootstrap Icons
+- Fragmento `navbar` con:
+   - Logo/nombre "MediTrack"
+   - Menú dinámico según rol usando `sec:authorize`
+   - Nombre de usuario autenticado (`sec:authentication="name"`)
+   - Botón de logout (formulario POST a `/logout`)
+
+##### C. enfermeria/dashboard.html
+- Header con `th:replace` del navbar
+- Card con total de tareas asignadas
+- Tabla con tareas recientes (máximo 5)
+- Columnas: Paciente, Descripción, Estado, Prioridad
+- Botón "Ver Todas las Tareas" → `/enfermeria/mis-tareas`
+
+##### D. enfermeria/mis-tareas.html
+- Tabla completa de tareas del usuario
+- Por cada tarea, formulario inline para cambiar estado
+- Select con estados (PENDIENTE, EN_CURSO, REALIZADA)
+- Campo textarea para observaciones (opcional)
+- Botón "Actualizar" por tarea
+
+##### E. medicina/crear-tarea.html
+- Formulario con `th:object="${tarea}"` y `th:field`
+- Select para paciente (mostrar nombre + HC)
+- Select para usuario asignado (solo rol ENFERMERIA)
+- Select para turno (mostrar nombre + horario)
+- Textarea para descripción
+- Selects para tipo, prioridad, estado
+- Input datetime-local para fecha
+- Botón "Crear Tarea"
+
+##### F. medicina/pacientes.html
+- Tabla con lista de pacientes
+- Columnas: Nombre, Apellidos, Fecha Nacimiento, HC, Habitación
+- Botón "Crear Nuevo Paciente" → `/medicina/crear-paciente`
+
+##### G. medicina/crear-paciente.html
+- Formulario con `th:object="${paciente}"`
+- Campos: nombre, apellidos, fechaNacimiento, numeroHistoriaClinica, habitacion
+- Validación HTML5 (required, pattern si es necesario)
+- Botón "Crear Paciente"
+
+##### H. supervisor/dashboard.html
+- Cards con totales: total tareas, total usuarios, total turnos
+- Tarjetas con iconos de Bootstrap Icons
+- Enlaces rápidos a: Carga de Trabajo, Usuarios, Reasignar Tareas
+
+##### I. supervisor/carga-trabajo.html
+- Tabla o cards mostrando cada turno
+- Por cada turno: nombre, horario, número de tareas asignadas
+- Opcional: gráfico simple con barras CSS
+
+##### J. supervisor/reasignar-tareas.html
+- Tabla de tareas
+- Por cada tarea: descripción, paciente, usuario actual
+- Select para cambiar usuario asignado
+- Botón "Reasignar" por tarea
+
+---
+
+#### 7. **Añadir Dependencia de Thymeleaf Security**
+
+**Verificar en pom.xml que existe:**
+
+```xml
+<dependency>
+    <groupId>org.thymeleaf.extras</groupId>
+    <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+</dependency>
 ```
 
-**NOTAS IMPORTANTES:**
-- CSRF desactivado (API REST stateless)
-- HTTP Basic para autenticación (username:password en headers)
-- Roles SIN prefijo "ROLE_" en hasRole() (Spring lo añade automáticamente)
-- `.hasAnyRole()` para múltiples roles
-- `.hasRole()` para un solo rol
+**Si NO existe, añadirla.**
+
+Esto permite usar `sec:authorize` en las vistas.
 
 ---
 
-#### 2. **Crear CustomUserDetailsService.java**
+#### 8. **Crear Recursos Estáticos (Opcional)**
 
-**Ubicación:** `src/main/java/com/hospital/meditrack/config/CustomUserDetailsService.java`
+Si se desea personalizar CSS/JS:
 
-**Implementación:**
+**Ubicación:** `src/main/resources/static/`
 
-```java
-package com.hospital.meditrack.config;
+Crear:
+- `static/css/custom.css` (estilos personalizados)
+- `static/js/scripts.js` (scripts personalizados)
 
-import com.hospital.meditrack.model.entity.Usuario;
-import com.hospital.meditrack.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-
-/**
- * Servicio personalizado para cargar usuarios desde la base de datos.
- * Spring Security lo usa para autenticación.
- */
-@Service
-public class CustomUserDetailsService implements UserDetailsService {
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByUsername(username)
-            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
-        
-        // Convertir el rol del enum a GrantedAuthority
-        // Spring Security añade automáticamente el prefijo "ROLE_"
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name());
-        
-        return new User(
-            usuario.getUsername(),
-            usuario.getPassword(),  // Ya está encriptado con BCrypt
-            Collections.singletonList(authority)
-        );
-    }
-}
-```
-
-**IMPORTANTE:**
-- El password ya está encriptado (BCrypt desde Fase 5)
-- El prefijo "ROLE_" se añade aquí manualmente
-- Devuelve un objeto `UserDetails` de Spring Security
-
----
-
-#### 3. **Actualizar PasswordEncoderConfig.java**
-
-**Ya existe desde Fase 5, NO modificar.**
-
-Verificar que existe:
-```java
-@Configuration
-public class PasswordEncoderConfig {
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-}
+**Referenciar en las vistas con:**
+```html
+<link th:href="@{/css/custom.css}" rel="stylesheet">
+<script th:src="@{/js/scripts.js}"></script>
 ```
 
 ---
 
-#### 4. **Crear DataLoader.java (Datos de Prueba)**
+#### 9. **Tests (NO OBLIGATORIOS para Fase 8)**
 
-**Ubicación:** `src/main/java/com/hospital/meditrack/config/DataLoader.java`
+La Fase 8 es principalmente UI. Tests opcionales:
 
-**Para crear usuarios de prueba al arrancar la app:**
+- Tests de integración con MockMvc para verificar que las vistas se cargan
+- Tests de seguridad para verificar que cada rol solo accede a sus vistas
 
-```java
-package com.hospital.meditrack.config;
+**Si se crean tests:** Máximo 5 tests básicos de navegación.
 
-import com.hospital.meditrack.model.entity.Usuario;
-import com.hospital.meditrack.model.enums.Rol;
-import com.hospital.meditrack.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-
-/**
- * Carga usuarios de prueba al arrancar la aplicación.
- * SOLO para desarrollo/pruebas.
- */
-@Component
-public class DataLoader implements CommandLineRunner {
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @Override
-    public void run(String... args) throws Exception {
-        // Solo crear si no existen usuarios
-        if (usuarioRepository.count() == 0) {
-            
-            // Usuario ENFERMERIA
-            Usuario enfermera = new Usuario();
-            enfermera.setNombre("Ana");
-            enfermera.setApellidos("García López");
-            enfermera.setUsername("enfermera");
-            enfermera.setPassword(passwordEncoder.encode("enfermera123"));
-            enfermera.setRol(Rol.ENFERMERIA);
-            usuarioRepository.save(enfermera);
-            
-            // Usuario MEDICINA
-            Usuario medico = new Usuario();
-            medico.setNombre("Carlos");
-            medico.setApellidos("Martínez Ruiz");
-            medico.setUsername("medico");
-            medico.setPassword(passwordEncoder.encode("medico123"));
-            medico.setRol(Rol.MEDICINA);
-            usuarioRepository.save(medico);
-            
-            // Usuario SUPERVISOR
-            Usuario supervisor = new Usuario();
-            supervisor.setNombre("Laura");
-            supervisor.setApellidos("Fernández Sánchez");
-            supervisor.setUsername("supervisor");
-            supervisor.setPassword(passwordEncoder.encode("supervisor123"));
-            supervisor.setRol(Rol.SUPERVISOR);
-            usuarioRepository.save(supervisor);
-            
-            System.out.println("✅ Usuarios de prueba creados:");
-            System.out.println("   - enfermera / enfermera123 (ENFERMERIA)");
-            System.out.println("   - medico / medico123 (MEDICINA)");
-            System.out.println("   - supervisor / supervisor123 (SUPERVISOR)");
-        }
-    }
-}
-```
-
-**NOTAS:**
-- Solo crea usuarios si la tabla está vacía
-- Passwords encriptados con BCrypt
-- Imprime credenciales en consola para pruebas
+**Si NO se crean tests:** Está aceptado para esta fase, ya que el enfoque es UI.
 
 ---
 
-#### 5. **Crear Tests de Seguridad (8 tests)**
+#### 10. **Commits Atómicos**
 
-##### A. SecurityConfigTest.java (8 tests)
-
-**Ubicación:** `src/test/java/com/hospital/meditrack/SecurityConfigTest.java`
-
-```java
-package com.hospital.meditrack;
-
-import com.hospital.meditrack.model.entity.Usuario;
-import com.hospital.meditrack.model.enums.Rol;
-import com.hospital.meditrack.repository.UsuarioRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
-@TestPropertySource(locations = "classpath:application-test.properties")
-class SecurityConfigTest {
-    
-    @Autowired
-    private MockMvc mockMvc;
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @BeforeEach
-    void setUp() {
-        // Crear usuario de prueba si no existe
-        if (usuarioRepository.findByUsername("testuser").isEmpty()) {
-            Usuario usuario = new Usuario();
-            usuario.setNombre("Test");
-            usuario.setApellidos("User");
-            usuario.setUsername("testuser");
-            usuario.setPassword(passwordEncoder.encode("password"));
-            usuario.setRol(Rol.SUPERVISOR);
-            usuarioRepository.save(usuario);
-        }
-    }
-    
-    @Test
-    void deberiaDenegarAccesoSinAutenticacion() throws Exception {
-        mockMvc.perform(get("/api/turnos"))
-            .andExpect(status().isUnauthorized());
-    }
-    
-    @Test
-    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
-    void enfermeriaDeberiaVerTurnos() throws Exception {
-        mockMvc.perform(get("/api/turnos"))
-            .andExpect(status().isOk());
-    }
-    
-    @Test
-    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
-    void enfermeriaNoDeberiaCrearTurnos() throws Exception {
-        mockMvc.perform(post("/api/turnos"))
-            .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    @WithMockUser(username = "medico", roles = "MEDICINA")
-    void medicinaDeberiaCrearPacientes() throws Exception {
-        mockMvc.perform(post("/api/pacientes"))
-            .andExpect(status().isBadRequest());  // BadRequest por validación, no Forbidden
-    }
-    
-    @Test
-    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
-    void enfermeriaNoDeberiaCrearPacientes() throws Exception {
-        mockMvc.perform(post("/api/pacientes"))
-            .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    @WithMockUser(username = "supervisor", roles = "SUPERVISOR")
-    void supervisorDeberiaTenerAccesoCompleto() throws Exception {
-        mockMvc.perform(get("/api/usuarios"))
-            .andExpect(status().isOk());
-        
-        mockMvc.perform(get("/api/turnos"))
-            .andExpect(status().isOk());
-        
-        mockMvc.perform(get("/api/pacientes"))
-            .andExpect(status().isOk());
-        
-        mockMvc.perform(get("/api/tareas"))
-            .andExpect(status().isOk());
-    }
-    
-    @Test
-    @WithMockUser(username = "enfermera", roles = "ENFERMERIA")
-    void enfermeriaNoDeberiaAccederAUsuarios() throws Exception {
-        mockMvc.perform(get("/api/usuarios"))
-            .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    @WithMockUser(username = "medico", roles = "MEDICINA")
-    void medicinaNoDeberiaAccederAUsuarios() throws Exception {
-        mockMvc.perform(get("/api/usuarios"))
-            .andExpect(status().isForbidden());
-    }
-}
-```
-
-**NOTAS:**
-- `@WithMockUser` simula usuario autenticado con rol
-- `status().isUnauthorized()` = 401 (sin autenticación)
-- `status().isForbidden()` = 403 (autenticado pero sin permisos)
-- `status().isBadRequest()` = 400 (tiene permisos pero datos inválidos)
+1. `config: Actualizar SecurityConfig para soporte de vistas web y formLogin`
+2. `feat: Crear WebController con redirección por rol`
+3. `feat: Crear EnfermeriaWebController con vistas de enfermería`
+4. `feat: Crear MedicinaWebController con vistas de medicina`
+5. `feat: Crear SupervisorWebController con vistas de supervisor`
+6. `feat: Crear vista de login y fragments comunes (header)`
+7. `feat: Crear vistas de enfermería (dashboard, mis-tareas)`
+8. `feat: Crear vistas de medicina (dashboard, crear-tarea, pacientes, crear-paciente)`
+9. `feat: Crear vistas de supervisor (dashboard, carga-trabajo, reasignar-tareas, usuarios)`
+10. `feat: Completar Fase 8 - Vistas Thymeleaf por Rol`
 
 ---
 
-#### 6. **Actualizar application.properties**
+#### 11. **Verificación Manual (POST-IMPLEMENTACIÓN)**
 
-**Añadir al final de `src/main/resources/application.properties`:**
-
-```properties
-# Spring Security
-spring.security.user.name=admin
-spring.security.user.password=admin123
-spring.security.user.roles=SUPERVISOR
-
-# Logging de seguridad (para debug)
-logging.level.org.springframework.security=DEBUG
-```
-
-**NOTA:** Estas son credenciales por defecto si no hay usuarios en BD. DataLoader las sobrescribe.
-
----
-
-#### 7. **Commits Atómicos**
-
-1. `config: Crear SecurityConfig con RBAC por roles`
-2. `config: Crear CustomUserDetailsService para autenticación desde BD`
-3. `config: Crear DataLoader con usuarios de prueba`
-4. `test: Añadir tests de seguridad (8 tests)`
-5. `docs: Actualizar README con credenciales de prueba`
-6. `feat: Completar Fase 7 - Spring Security con RBAC`
-
----
-
-#### 8. **Ejecutar al Terminar**
-
-```bash
-mvn test
-```
-
-**Resultado esperado:**
-- Tests Security: 8/8 ✅
-- **TOTAL PROYECTO: 65/65** ✅
-   - Turno: 13
-   - Paciente: 13
-   - Usuario: 13
-   - TareaClinica: 18
-   - Security: 8
-
----
-
-### 📋 VERIFICACIÓN MANUAL POST-IMPLEMENTACIÓN
-
-#### Arrancar la aplicación:
+**Arrancar aplicación:**
 ```bash
 mvn spring-boot:run
 ```
 
-#### Probar autenticación con curl:
+**Probar flujos:**
 
-**1. Sin autenticación (debe fallar):**
-```bash
-curl http://localhost:8080/api/turnos
-# Resultado esperado: 401 Unauthorized
-```
+1. **Login:**
+   - Ir a http://localhost:8080/login
+   - Probar usuario: `enfermera` / `enfermera123`
+   - Verificar redirección a `/enfermeria/dashboard`
 
-**2. Con usuario ENFERMERIA:**
-```bash
-curl -u enfermera:enfermera123 http://localhost:8080/api/turnos
-# Resultado esperado: 200 OK con lista de turnos
+2. **Navegación ENFERMERIA:**
+   - Ver dashboard con tareas asignadas
+   - Ir a "Mis Tareas"
+   - Actualizar estado de una tarea
+   - Verificar que NO puede acceder a `/medicina/**` (403 Forbidden)
 
-curl -u enfermera:enfermera123 -X POST http://localhost:8080/api/turnos
-# Resultado esperado: 403 Forbidden (no tiene permiso)
-```
+3. **Navegación MEDICINA:**
+   - Login: `medico` / `medico123`
+   - Ver dashboard
+   - Crear nueva tarea (formulario completo)
+   - Crear nuevo paciente
+   - Verificar que la tarea aparece en enfermería
 
-**3. Con usuario MEDICINA:**
-```bash
-curl -u medico:medico123 http://localhost:8080/api/pacientes
-# Resultado esperado: 200 OK
+4. **Navegación SUPERVISOR:**
+   - Login: `supervisor` / `supervisor123`
+   - Ver dashboard general
+   - Ver carga de trabajo por turno
+   - Reasignar una tarea entre usuarios
+   - Verificar acceso a todas las secciones
 
-curl -u medico:medico123 http://localhost:8080/api/usuarios
-# Resultado esperado: 403 Forbidden (solo SUPERVISOR)
-```
-
-**4. Con usuario SUPERVISOR:**
-```bash
-curl -u supervisor:supervisor123 http://localhost:8080/api/usuarios
-# Resultado esperado: 200 OK
-
-curl -u supervisor:supervisor123 -X DELETE http://localhost:8080/api/turnos/1
-# Resultado esperado: 204 No Content
-```
+5. **Logout:**
+   - Click en botón "Salir"
+   - Verificar redirección a `/login?logout`
 
 ---
 
 ### ⚠️ CONSIDERACIONES ESPECIALES
 
-**1. CSRF en Thymeleaf (Fase 8):**
+**1. CSRF Token en Formularios:**
 
-Cuando se implementen vistas Thymeleaf, reactivar CSRF:
-```java
-.csrf(csrf -> csrf
-    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-)
+Spring Security activa CSRF por defecto. Thymeleaf lo incluye automáticamente en formularios con `th:action`.
+
+**Ejemplo correcto:**
+```html
+<form th:action="@{/medicina/crear-tarea}" method="post">
+    <!-- Thymeleaf añade automáticamente el CSRF token -->
+</form>
 ```
 
-**2. Logging de Seguridad:**
+**2. Formato de Fechas:**
 
-Si hay problemas, activar logs en `application.properties`:
-```properties
-logging.level.org.springframework.security=TRACE
+Para `LocalDateTime` en formularios, usar input type `datetime-local`:
+```html
+<input type="datetime-local" th:field="*{fecha}" class="form-control" required>
 ```
 
-**3. Excepciones Personalizadas:**
+**3. Enums en Selects:**
 
-Para respuestas JSON en errores de seguridad, crear `AccessDeniedHandler` personalizado (opcional para Fase 7).
+Para selects de enums, usar valores exactos:
+```html
+<select th:field="*{tipo}">
+    <option value="MEDICACION">Medicación</option>
+    <option value="CONTROL_SIGNOS_VITALES">Control Signos Vitales</option>
+    <!-- etc -->
+</select>
+```
 
----
+**4. Relaciones en Formularios:**
 
-### 🎯 RESUMEN FASE 7
+Para asignar relaciones (@ManyToOne), usar el ID:
+```html
+<select th:field="*{paciente.id}">
+    <option th:each="p : ${pacientes}" th:value="${p.id}" th:text="${p.nombre}"></option>
+</select>
+```
 
-**Implementa:**
-- ✅ Autenticación HTTP Basic
-- ✅ Autorización RBAC (3 roles)
-- ✅ UserDetailsService desde BD
-- ✅ Usuarios de prueba automáticos
-- ✅ Tests de seguridad (8 tests)
+**5. Fragments de Thymeleaf:**
 
-**Protege:**
-- ✅ Endpoints por método HTTP
-- ✅ Endpoints por rol
-- ✅ Datos sensibles (passwords)
+Usar `th:replace` para incluir fragments:
+```html
+<!-- En header.html -->
+<nav th:fragment="navbar">...</nav>
 
-**Permite:**
-- ✅ ENFERMERIA: Ver y actualizar sus tareas
-- ✅ MEDICINA: Crear tareas y pacientes
-- ✅ SUPERVISOR: Acceso completo
-
----
-
-### 📦 CHECKLIST FASE 7
-
-Antes de ejecutar:
-- [ ] CLAUDE.md actualizado con instrucciones Fase 7
-- [ ] Commit de CLAUDE.md realizado
-
-Después de ejecutar:
-- [ ] SecurityConfig.java creado
-- [ ] CustomUserDetailsService.java creado
-- [ ] DataLoader.java creado
-- [ ] 8 tests de seguridad pasando
-- [ ] Total proyecto: 65/65 tests
-- [ ] 6 commits atómicos en GitHub
-- [ ] Usuarios de prueba funcionando
+<!-- En otras vistas -->
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+```
 
 ---
 
-## PASO 3: Hacer Commit del CLAUDE.md Actualizado
+### 📋 CHECKLIST FASE 8
 
-```bash
-git add CLAUDE.md
-git commit -m "docs: Actualizar CLAUDE.md para Fase 7 - Spring Security con RBAC
+**Backend (Controllers):**
+- [ ] SecurityConfig actualizado con formLogin
+- [ ] WebController creado
+- [ ] EnfermeriaWebController creado
+- [ ] MedicinaWebController creado
+- [ ] SupervisorWebController creado
 
-- Configuración de autenticación HTTP Basic
-- Autorización por roles (ENFERMERIA, MEDICINA, SUPERVISOR)
-- UserDetailsService personalizado desde BD
-- DataLoader con usuarios de prueba
-- Tests de seguridad (8 tests)
-- Total esperado: 65/65 tests"
+**Frontend (Vistas):**
+- [ ] login.html creado
+- [ ] fragments/header.html creado
+- [ ] enfermeria/dashboard.html creado
+- [ ] enfermeria/mis-tareas.html creado
+- [ ] medicina/dashboard.html creado
+- [ ] medicina/crear-tarea.html creado
+- [ ] medicina/pacientes.html creado
+- [ ] medicina/crear-paciente.html creado
+- [ ] supervisor/dashboard.html creado
+- [ ] supervisor/carga-trabajo.html creado
+- [ ] supervisor/reasignar-tareas.html creado
+- [ ] supervisor/usuarios.html creado
+
+**Verificación:**
+- [ ] Login funciona con usuarios de prueba
+- [ ] Redirección por rol funciona
+- [ ] ENFERMERIA puede ver y actualizar sus tareas
+- [ ] MEDICINA puede crear tareas y pacientes
+- [ ] SUPERVISOR puede reasignar tareas
+- [ ] Logout funciona correctamente
+- [ ] No hay accesos no autorizados (403)
+
+**Commits:**
+- [ ] 10 commits atómicos realizados
+- [ ] Push a GitHub completado
+
+---
+
+### 🎯 RESULTADO ESPERADO
+
+**Al terminar Fase 8:**
+- ✅ Sistema completo con interfaz web funcional
+- ✅ 3 dashboards separados por rol
+- ✅ Formularios funcionales para crear tareas y pacientes
+- ✅ Actualización de estado de tareas desde web
+- ✅ Navegación protegida por Spring Security
+- ✅ Diseño responsive con Bootstrap 5
+
+**Total del Proyecto:**
+- Backend: 100% completo
+- Frontend: 100% completo (web)
+- Tests: 65/65 ✅
+- Documentación: Actualizada
+
+---
+
+**PRÓXIMA FASE:** Fase 9 - Dashboard Supervisor con WebFlux y SSE (Server-Sent Events) para actualización en tiempo real.
+
+---
+
+**ÚLTIMA ACTUALIZACIÓN:** [Fecha actual]
+**ESTADO:** Fase 8 en progreso - Vistas Thymeleaf
+**PRÓXIMA ACCIÓN:** Crear controladores web y vistas Thymeleaf
+
+Guarda el archivo y haz commit:
+bashgit add CLAUDE.md
+git commit -m "docs: Actualizar CLAUDE.md para Fase 8 - Vistas Thymeleaf
+
+- Especificación completa de arquitectura de vistas
+- Controladores web por rol (Enfermería, Medicina, Supervisor)
+- Plantillas Thymeleaf con Bootstrap 5
+- Funcionalidades detalladas por rol
+- 10 commits atómicos planificados"
 
 git push origin main
-```
 
----
 
 
 
@@ -1144,5 +1132,5 @@ git push origin main
 ---
 
 **ÚLTIMA ACTUALIZACIÓN:** 29 Abril 2026
-**ESTADO:** Fase 7 COMPLETADA - 66/66 tests pasando (Turno: 13 + Paciente: 13 + Usuario: 13 + TareaClinica: 18 + Security: 8 + App: 1)
-**PRÓXIMA ACCIÓN:** Fase 8 - Vistas Thymeleaf (enfermeria/, medicina/, supervisor/, common/)
+**ESTADO:** Fase 8 COMPLETADA - 66/66 tests pasando | 12 vistas Thymeleaf + 4 controladores web
+**PRÓXIMA ACCIÓN:** Fase 9 - Dashboard Supervisor con WebFlux y SSE (Server-Sent Events)

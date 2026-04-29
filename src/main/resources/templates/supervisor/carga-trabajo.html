@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head('Carga de Trabajo')}"></head>
+<body class="bg-light">
+
+<nav th:replace="~{fragments/header :: navbar('SUPERVISOR')}"></nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block sidebar py-3">
+            <div class="position-sticky">
+                <ul class="nav flex-column px-2">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/supervisor/dashboard}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semibold" th:href="@{/supervisor/carga-trabajo}">
+                            <i class="bi bi-bar-chart me-2"></i>Carga de Trabajo
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/supervisor/reasignar-tareas}">
+                            <i class="bi bi-arrow-left-right me-2"></i>Reasignar Tareas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/supervisor/usuarios}">
+                            <i class="bi bi-people-fill me-2"></i>Usuarios
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="col-md-10 content-area">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <a th:href="@{/supervisor/dashboard}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h2 class="fw-bold mb-0">
+                    <i class="bi bi-bar-chart me-2" style="color: #6f42c1;"></i>Carga de Trabajo por Turno
+                </h2>
+            </div>
+
+            <div class="row g-4">
+                <!-- Cards por turno -->
+                <div class="col-md-4" th:each="entry : ${cargaPorTurno}">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:40px;height:40px;background:rgba(111,66,193,0.1);">
+                                    <i class="bi bi-clock" style="color:#6f42c1;"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold" th:text="${entry.key.nombre}">Turno</h6>
+                                    <small class="text-muted"
+                                           th:text="${entry.key.horaInicio} + ' - ' + ${entry.key.horaFin}">Horario</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body text-center py-4">
+                            <h1 class="display-4 fw-bold mb-0"
+                                th:style="${entry.value > 10} ? 'color: #dc3545;' : (${entry.value > 5} ? 'color: #fd7e14;' : 'color: #198754;')"
+                                th:text="${entry.value}">0</h1>
+                            <p class="text-muted mb-3">tareas asignadas</p>
+
+                            <!-- Barra de progreso visual -->
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar"
+                                     th:style="'width: ' + ${entry.value * 10} + '%; max-width: 100%;'"
+                                     th:classappend="${entry.value > 10} ? 'bg-danger' : (${entry.value > 5} ? 'bg-warning' : 'bg-success')"
+                                     role="progressbar">
+                                </div>
+                            </div>
+                            <small class="text-muted mt-1 d-block"
+                                   th:text="${entry.value > 10} ? 'Carga alta' : (${entry.value > 5} ? 'Carga media' : 'Carga baja')">Estado</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla resumen -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="bi bi-table me-2" style="color:#6f42c1;"></i>Resumen por Turno
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Turno</th>
+                                <th>Horario</th>
+                                <th>Nº Tareas</th>
+                                <th>Carga</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="entry : ${cargaPorTurno}">
+                                <td class="align-middle fw-semibold" th:text="${entry.key.nombre}">Turno</td>
+                                <td class="align-middle text-muted"
+                                    th:text="${entry.key.horaInicio} + ' - ' + ${entry.key.horaFin}">Horario</td>
+                                <td class="align-middle">
+                                    <span class="badge fs-6"
+                                          th:classappend="${entry.value > 10} ? 'bg-danger' : (${entry.value > 5} ? 'bg-warning text-dark' : 'bg-success')"
+                                          th:text="${entry.value}">0</span>
+                                </td>
+                                <td class="align-middle">
+                                    <span th:text="${entry.value > 10} ? 'Alta' : (${entry.value > 5} ? 'Media' : 'Baja')"
+                                          th:classappend="${entry.value > 10} ? 'text-danger fw-semibold' : (${entry.value > 5} ? 'text-warning fw-semibold' : 'text-success fw-semibold')">Baja</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

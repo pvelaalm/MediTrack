@@ -61,6 +61,11 @@ public class SupervisorWebController {
         return "supervisor/reasignar-tareas";
     }
 
+    @GetMapping("/dashboard-realtime")
+    public String dashboardRealtime() {
+        return "supervisor/dashboard-realtime";
+    }
+
     @PostMapping("/reasignar-tarea/{id}")
     public String reasignarTarea(
             @PathVariable Long id,

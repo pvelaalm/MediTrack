@@ -3,6 +3,7 @@ package com.hospital.meditrack.controller;
 import com.hospital.meditrack.model.entity.TareaClinica;
 import com.hospital.meditrack.model.entity.Turno;
 import com.hospital.meditrack.model.entity.Usuario;
+import com.hospital.meditrack.model.enums.Rol;
 import com.hospital.meditrack.service.TareaClinicaService;
 import com.hospital.meditrack.service.TurnoService;
 import com.hospital.meditrack.service.UsuarioService;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,7 +53,64 @@ public class SupervisorWebController {
     @GetMapping("/usuarios")
     public String usuarios(Model model) {
         model.addAttribute("usuarios", usuarioService.obtenerTodos());
+        model.addAttribute("roles", Rol.values());
         return "supervisor/usuarios";
+    }
+
+    @PostMapping("/usuarios/crear")
+    public String crearUsuario(@RequestParam String nombre,
+                               @RequestParam String apellidos,
+                               @RequestParam String username,
+                               @RequestParam String password,
+                               @RequestParam Rol rol,
+                               RedirectAttributes redirectAttrs) {
+        try {
+            Usuario usuario = new Usuario();
+            usuario.setNombre(nombre);
+            usuario.setApellidos(apellidos);
+            usuario.setUsername(username);
+            usuario.setPassword(password);
+            usuario.setRol(rol);
+            usuarioService.crear(usuario);
+            redirectAttrs.addFlashAttribute("mensajeExito", "Usuario creado correctamente.");
+        } catch (IllegalArgumentException e) {
+            redirectAttrs.addFlashAttribute("mensajeError", e.getMessage());
+        }
+        return "redirect:/supervisor/usuarios";
+    }
+
+    @PostMapping("/usuarios/editar/{id}")
+    public String editarUsuario(@PathVariable Long id,
+                                @RequestParam String nombre,
+                                @RequestParam String apellidos,
+                                @RequestParam String username,
+                                @RequestParam(required = false) String password,
+                                @RequestParam Rol rol,
+                                RedirectAttributes redirectAttrs) {
+        try {
+            Usuario usuario = new Usuario();
+            usuario.setNombre(nombre);
+            usuario.setApellidos(apellidos);
+            usuario.setUsername(username);
+            usuario.setPassword(password);
+            usuario.setRol(rol);
+            usuarioService.actualizar(id, usuario);
+            redirectAttrs.addFlashAttribute("mensajeExito", "Usuario actualizado correctamente.");
+        } catch (IllegalArgumentException e) {
+            redirectAttrs.addFlashAttribute("mensajeError", e.getMessage());
+        }
+        return "redirect:/supervisor/usuarios";
+    }
+
+    @PostMapping("/usuarios/eliminar/{id}")
+    public String eliminarUsuario(@PathVariable Long id, RedirectAttributes redirectAttrs) {
+        try {
+            usuarioService.eliminar(id);
+            redirectAttrs.addFlashAttribute("mensajeExito", "Usuario eliminado correctamente.");
+        } catch (Exception e) {
+            redirectAttrs.addFlashAttribute("mensajeError", "No se pudo eliminar el usuario.");
+        }
+        return "redirect:/supervisor/usuarios";
     }
 
     @GetMapping("/reasignar-tareas")
@@ -59,6 +118,11 @@ public class SupervisorWebController {
         model.addAttribute("tareas", tareaService.obtenerTodas());
         model.addAttribute("usuarios", usuarioService.obtenerTodos());
         return "supervisor/reasignar-tareas";
+    }
+
+    @GetMapping("/dashboard-realtime")
+    public String dashboardRealtime() {
+        return "supervisor/dashboard-realtime";
     }
 
     @PostMapping("/reasignar-tarea/{id}")

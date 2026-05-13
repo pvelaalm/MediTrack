@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <th:block th:replace="~{fragments/header :: head('Dashboard Tiempo Real')}"></th:block>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        .stat-value.updated {
+            transform: scale(1.1);
+            color: #0d6efd !important;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .connection-badge {
+            font-size: 0.85rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+        }
+        .rank-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <th:block th:replace="~{fragments/header :: navbar('SUPERVISOR')}"></th:block>
+
+    <div class="container-fluid py-4 px-4">
+
+        <!-- Encabezado -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h2 class="fw-bold mb-0">
+                    <i class="bi bi-activity me-2 text-purple" style="color:#6f42c1;"></i>
+                    Dashboard en Tiempo Real
+                </h2>
+                <small class="text-muted">Actualización automática cada 5 segundos</small>
+            </div>
+            <div class="text-end">
+                <span id="conexion-badge" class="badge connection-badge bg-secondary">
+                    <i class="bi bi-circle-fill me-1"></i>Conectando...
+                </span>
+                <div class="text-muted small mt-1">
+                    Última actualización: <span id="ultima-actualizacion">--:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjetas de estadísticas generales -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-primary mb-1"><i class="bi bi-clipboard2-pulse fs-4"></i></div>
+                        <div class="stat-value text-primary" id="stat-total-tareas">0</div>
+                        <div class="text-muted small">Total Tareas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-warning mb-1"><i class="bi bi-clock fs-4"></i></div>
+                        <div class="stat-value text-warning" id="stat-pendientes">0</div>
+                        <div class="text-muted small">Pendientes</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-info mb-1"><i class="bi bi-arrow-clockwise fs-4"></i></div>
+                        <div class="stat-value text-info" id="stat-en-curso">0</div>
+                        <div class="text-muted small">En Curso</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-success mb-1"><i class="bi bi-check-circle fs-4"></i></div>
+                        <div class="stat-value text-success" id="stat-realizadas">0</div>
+                        <div class="text-muted small">Realizadas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-danger mb-1"><i class="bi bi-x-circle fs-4"></i></div>
+                        <div class="stat-value text-danger" id="stat-canceladas">0</div>
+                        <div class="text-muted small">Canceladas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-secondary mb-1"><i class="bi bi-person-vcard fs-4"></i></div>
+                        <div class="stat-value text-secondary" id="stat-pacientes">0</div>
+                        <div class="text-muted small">Pacientes</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-xl">
+                <div class="card stat-card h-100">
+                    <div class="card-body text-center py-3">
+                        <div class="text-dark mb-1"><i class="bi bi-people fs-4"></i></div>
+                        <div class="stat-value text-dark" id="stat-enfermeros">0</div>
+                        <div class="text-muted small">Enfermeros</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-7">
+                <div class="card stat-card h-100">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="fw-semibold mb-0">
+                            <i class="bi bi-bar-chart-fill me-2 text-primary"></i>Carga por Turno
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chart-turnos"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="card stat-card h-100">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="fw-semibold mb-0">
+                            <i class="bi bi-pie-chart-fill me-2 text-warning"></i>Tareas por Prioridad
+                        </h5>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div class="chart-container w-100">
+                            <canvas id="chart-prioridades"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 5 Enfermeros -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card stat-card">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="fw-semibold mb-0">
+                            <i class="bi bi-trophy-fill me-2 text-warning"></i>Top 5 Enfermeros con más tareas asignadas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">#</th>
+                                    <th>Enfermero</th>
+                                    <th class="text-end" style="width:180px;">Tareas Asignadas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top-enfermeros">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        <i class="bi bi-hourglass-split me-2"></i>Esperando datos...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ── Inicializar gráfico de barras: Carga por Turno ──
+        const ctxTurnos = document.getElementById('chart-turnos').getContext('2d');
+        const chartTurnos = new Chart(ctxTurnos, {
+            type: 'bar',
+            data: {
+                labels: ['Mañana', 'Tarde', 'Noche'],
+                datasets: [{
+                    label: 'Tareas asignadas',
+                    data: [0, 0, 0],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(25, 135, 84, 0.7)',
+                        'rgba(111, 66, 193, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgb(13, 110, 253)',
+                        'rgb(25, 135, 84)',
+                        'rgb(111, 66, 193)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // ── Inicializar gráfico donut: Tareas por Prioridad ──
+        const ctxPrioridades = document.getElementById('chart-prioridades').getContext('2d');
+        const chartPrioridades = new Chart(ctxPrioridades, {
+            type: 'doughnut',
+            data: {
+                labels: ['Urgente', 'Alta', 'Media', 'Baja'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(253, 126, 20, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(173, 181, 189, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(220, 53, 69)',
+                        'rgb(253, 126, 20)',
+                        'rgb(255, 193, 7)',
+                        'rgb(173, 181, 189)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 12, usePointStyle: true }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+
+        // ── Helper: actualizar tarjeta con animación ──
+        function updateStatCard(elementId, newValue) {
+            const el = document.getElementById(elementId);
+            if (el && el.textContent !== String(newValue)) {
+                el.textContent = newValue;
+                el.classList.add('updated');
+                setTimeout(() => el.classList.remove('updated'), 600);
+            }
+        }
+
+        // ── Helper: actualizar tabla de top enfermeros ──
+        function updateTopEnfermeros(enfermeros) {
+            const tbody = document.getElementById('top-enfermeros');
+            if (!enfermeros || enfermeros.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4"><i class="bi bi-inbox me-2"></i>Sin datos</td></tr>';
+                return;
+            }
+            const rankColors = ['#ffc107','#adb5bd','#cd7f32','#6c757d','#6c757d'];
+            tbody.innerHTML = enfermeros.map((e, i) => `
+                <tr>
+                    <td>
+                        <span class="rank-badge text-white" style="background:${rankColors[i] || '#6c757d'};">
+                            ${i + 1}
+                        </span>
+                    </td>
+                    <td>
+                        <i class="bi bi-person-fill me-2 text-muted"></i>
+                        <strong>${e.nombreCompleto}</strong>
+                    </td>
+                    <td class="text-end">
+                        <span class="badge bg-primary fs-6 px-3">${e.numeroTareas}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ── Conectar a SSE ──
+        const badge = document.getElementById('conexion-badge');
+        const ultimaAct = document.getElementById('ultima-actualizacion');
+
+        const eventSource = new EventSource('/api/supervisor/dashboard/stream');
+
+        eventSource.addEventListener('open', () => {
+            badge.className = 'badge connection-badge bg-success';
+            badge.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Conectado';
+        });
+
+        eventSource.addEventListener('dashboard-update', (event) => {
+            const data = JSON.parse(event.data);
+
+            // Timestamp
+            const ts = new Date(data.timestamp);
+            ultimaAct.textContent = ts.toLocaleTimeString('es-ES');
+
+            // Tarjetas de estadísticas
+            const s = data.stats;
+            updateStatCard('stat-total-tareas', s.totalTareas);
+            updateStatCard('stat-pendientes',   s.tareasPendientes);
+            updateStatCard('stat-en-curso',     s.tareasEnCurso);
+            updateStatCard('stat-realizadas',   s.tareasRealizadas);
+            updateStatCard('stat-canceladas',   s.tareasCanceladas);
+            updateStatCard('stat-pacientes',    s.totalPacientes);
+            updateStatCard('stat-enfermeros',   s.totalEnfermeros);
+
+            // Gráfico de turnos
+            if (data.cargaPorTurno) {
+                const labels = Object.keys(data.cargaPorTurno);
+                const values = Object.values(data.cargaPorTurno);
+                chartTurnos.data.labels = labels;
+                chartTurnos.data.datasets[0].data = values;
+                chartTurnos.update('none');
+            }
+
+            // Gráfico de prioridades (orden: URGENTE, ALTA, MEDIA, BAJA)
+            if (data.tareasPorPrioridad) {
+                const p = data.tareasPorPrioridad;
+                chartPrioridades.data.datasets[0].data = [
+                    p.URGENTE || 0,
+                    p.ALTA    || 0,
+                    p.MEDIA   || 0,
+                    p.BAJA    || 0
+                ];
+                chartPrioridades.update('none');
+            }
+
+            // Tabla top enfermeros
+            updateTopEnfermeros(data.topEnfermeros);
+        });
+
+        eventSource.addEventListener('error', () => {
+            badge.className = 'badge connection-badge bg-danger';
+            badge.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Desconectado';
+        });
+    </script>
+</body>
+</html>

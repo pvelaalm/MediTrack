@@ -52,6 +52,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/tareas/**").hasAnyRole("ENFERMERIA", "MEDICINA", "SUPERVISOR")
                 .requestMatchers(HttpMethod.DELETE, "/api/tareas/**").hasRole("SUPERVISOR")
 
+                // API REST - DASHBOARD TIEMPO REAL (SSE)
+                .requestMatchers("/api/supervisor/dashboard/stream").hasRole("SUPERVISOR")
+
                 .anyRequest().authenticated()
             )
 

@@ -348,9 +348,15 @@ Sigue estos pasos cuando un nuevo profesional se incorpore al equipo y necesite 
 
 **Paso 2: Iniciar la Creación**
 
+<<<<<<< HEAD
 En la página de usuarios, haz clic en el botón **"Nuevo Usuario"** (parte superior derecha, junto al contador de usuarios).
 
 Se abrirá un formulario emergente (modal) directamente en la misma página.
+=======
+En la página de usuarios, busca y haz clic en el botón **"Crear Nuevo Usuario"** (normalmente en la parte superior de la tabla, con un icono ➕).
+
+Se abrirá el formulario de creación.
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 
 ---
 
@@ -363,7 +369,11 @@ Completa todos los campos del formulario:
 | **Nombre** | Nombre de pila del profesional | `María` | ✅ Sí |
 | **Apellidos** | Apellidos completos | `Sánchez Torres` | ✅ Sí |
 | **Usuario (username)** | Identificador único para el login | `msanchez` | ✅ Sí |
+<<<<<<< HEAD
 | **Contraseña** | Contraseña inicial (mínimo 6 caracteres) | `Temporal2026!` | ✅ Sí |
+=======
+| **Contraseña** | Contraseña inicial (mínimo 8 caracteres) | `Temporal2026!` | ✅ Sí |
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 | **Rol** | Nivel de acceso | `ENFERMERIA` | ✅ Sí |
 
 **Reglas importantes para el campo "Usuario (username)":**
@@ -409,6 +419,7 @@ Si un profesional necesita cambiar su contraseña, actualizar sus apellidos o ca
 
 1. Ve a **Menú → Usuarios** (como SUPERVISOR).
 2. Localiza al usuario en la tabla.
+<<<<<<< HEAD
 3. Haz clic en el icono de **lápiz** (✏️) de la columna "Acciones" de ese usuario.
 4. Se abrirá un formulario emergente (modal) con los datos actuales ya rellenos.
 5. Modifica los campos que necesites (nombre, apellidos, username o rol).
@@ -417,6 +428,14 @@ Si un profesional necesita cambiar su contraseña, actualizar sus apellidos o ca
 8. Verás un mensaje verde de confirmación en la parte superior de la página.
 
 > 💡 **Nota:** Si dejas el campo "Nueva Contraseña" en blanco al editar, la contraseña actual del usuario se mantiene. No hace falta volver a introducirla si solo quieres cambiar otros datos.
+=======
+3. Haz clic en el botón **"Editar"** de ese usuario.
+4. Modifica los campos necesarios.
+5. **Para cambiar la contraseña:** Introduce la nueva en el campo "Contraseña". Si dejas el campo vacío, la contraseña actual no cambia.
+6. Haz clic en **"Guardar Cambios"**.
+
+> 💡 **Nota:** Si dejas el campo "Contraseña" en blanco al editar, la contraseña actual del usuario se mantiene. No hace falta volver a introducirla si solo quieres cambiar otros datos.
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 
 ### 4.4. Eliminar un Usuario
 
@@ -424,10 +443,16 @@ Si un profesional necesita cambiar su contraseña, actualizar sus apellidos o ca
 
 1. Ve a **Menú → Usuarios** (como SUPERVISOR).
 2. Localiza al usuario en la tabla.
+<<<<<<< HEAD
 3. Haz clic en el icono de **papelera** (🗑️) de la columna "Acciones" de ese usuario.
 4. Aparece un diálogo de confirmación mostrando el nombre completo del usuario que vas a eliminar.
 5. Haz clic en **"Eliminar"** para confirmar, o en **"Cancelar"** para abortar la operación.
 6. El usuario desaparece de la lista y ya no podrá iniciar sesión.
+=======
+3. Haz clic en el botón **"Eliminar"** de ese usuario.
+4. Confirma la acción si el sistema te lo solicita.
+5. El usuario desaparece de la lista y ya no podrá iniciar sesión.
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 
 ---
 
@@ -1403,7 +1428,11 @@ R: Sí, la interfaz es responsive y funciona en móviles. Sin embargo, se recomi
 
 **P: ¿Cuánto tiempo dura mi sesión antes de expirar?**
 
+<<<<<<< HEAD
 R: La sesión dura **8 horas** sin actividad, suficiente para cubrir un turno completo sin necesidad de volver a hacer login. Si llevas más de 8 horas sin interactuar con el sistema, te redirigirá al login automáticamente.
+=======
+R: La sesión tiene una duración configurada por el administrador del sistema. Si llevas tiempo sin actividad, es posible que al intentar hacer algo te redirija al login. Esto es normal por seguridad. Vuelve a hacer login.
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 
 ---
 
@@ -1808,7 +1837,10 @@ Referencia completa de los tipos de tarea que puedes asignar al crear una tarea 
 | Versión | Fecha | Cambios realizados | Autor |
 |---|---|---|---|
 | 1.0 | Abril 2026 | Versión inicial completa del manual | Pedro Vela (TFG) |
+<<<<<<< HEAD
 | 1.1 | Mayo 2026 | Gestión de usuarios desde interfaz web (modales crear/editar/eliminar). Duración de sesión ampliada a 8 horas. | Pedro Vela (TFG) |
+=======
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 
 ---
 

@@ -652,10 +652,14 @@ data: {"timestamp":"2026-04-30T10:30:00","stats":{...},"cargaPorTurno":{...},...
 |---|---|---|---|
 | GET | `/supervisor/dashboard` | `supervisor/dashboard` | Dashboard estático con totales |
 | GET | `/supervisor/carga-trabajo` | `supervisor/carga-trabajo` | Carga de tareas agrupada por turno |
+<<<<<<< HEAD
 | GET | `/supervisor/usuarios` | `supervisor/usuarios` | Lista de todos los usuarios con acciones de gestión |
 | POST | `/supervisor/usuarios/crear` | (redirect) | Crea un nuevo usuario desde el formulario modal |
 | POST | `/supervisor/usuarios/editar/{id}` | (redirect) | Actualiza datos de un usuario (incluye cambio de rol y contraseña opcional) |
 | POST | `/supervisor/usuarios/eliminar/{id}` | (redirect) | Elimina un usuario del sistema |
+=======
+| GET | `/supervisor/usuarios` | `supervisor/usuarios` | Lista de todos los usuarios del sistema |
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 | GET | `/supervisor/reasignar-tareas` | `supervisor/reasignar-tareas` | Interfaz para reasignar tareas entre enfermeros |
 | POST | `/supervisor/reasignar-tarea/{id}` | (redirect) | Ejecuta la reasignación de una tarea |
 | GET | `/supervisor/dashboard-realtime` | `supervisor/dashboard-realtime` | Dashboard en tiempo real con SSE |
@@ -809,7 +813,11 @@ El archivo `fragments/header.html` define dos fragmentos reutilizados por todas 
 | `dashboard.html` | Totales: tareas, usuarios, turnos. |
 | `carga-trabajo.html` | Tabla de carga por turno con barras visuales de progreso. |
 | `reasignar-tareas.html` | Tabla con todas las tareas. Formulario `<select>` para elegir nuevo enfermero por cada tarea. |
+<<<<<<< HEAD
 | `usuarios.html` | Gestión completa de usuarios: tabla con botones de editar (modal pre-relleno) y eliminar (modal de confirmación), y botón "Nuevo Usuario" con modal de creación. Mensajes flash de éxito/error tras cada operación. |
+=======
+| `usuarios.html` | Lista de todos los usuarios con su rol y datos. |
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 | `dashboard-realtime.html` | Dashboard con SSE (ver sección 10). |
 
 ### 9.4. Tecnologías Frontend
@@ -1036,9 +1044,12 @@ logging.level.com.hospital.meditrack=DEBUG
 logging.level.org.springframework.web=INFO
 logging.level.org.hibernate.SQL=DEBUG
 
+<<<<<<< HEAD
 # Sesión HTTP
 server.servlet.session.timeout=8h               # Sesión expira tras 8 horas de inactividad
 
+=======
+>>>>>>> fcedf3c90e1dbd5856286fdb0144fd51e61bbfef
 # Inicialización de datos
 spring.sql.init.mode=always                      # Ejecutar data.sql en cada inicio
 spring.jpa.defer-datasource-initialization=true  # Esperar a JPA antes de ejecutar SQL

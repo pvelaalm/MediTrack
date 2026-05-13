@@ -328,104 +328,578 @@ class MiTest { ... }
 
 ---
 
-## 🎯 PLAN DE TRABAJO COMPLETO
+## 📊 PROGRESO ACTUAL
 
-### ✅ FASE 1-3: COMPLETADAS
-- Enumeraciones (Rol, TipoTarea, Prioridad, EstadoTarea)
-- Turno (Entity, Repo, Service, Controller, Tests)
-- data.sql con 3 turnos
+### Completado:
+- ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
+- ✅ Fase 4: Paciente completo (13 tests)
+- ✅ Fase 5: Usuario con BCrypt (13 tests)
+- ✅ Fase 6: TareaClinica con relaciones (18 tests)
+- ✅ Fase 7: Spring Security con RBAC (8 tests)
+- ✅ Fase 8: Vistas Thymeleaf por Rol (interfaz web completa)
 
-### 🔄 FASE 4: EN PROGRESO (SIGUIENTE PASO INMEDIATO)
-**Entidad Paciente - TESTS PENDIENTES**
+### Completado (FASE FINAL):
+- ✅ Fase 9: Dashboard Supervisor en Tiempo Real con WebFlux y SSE (COMPLETO)
 
-**ACCIÓN INMEDIATA:**
-1. Crear `PacienteRepositoryTest.java` (2 tests)
-2. Crear `PacienteServiceTest.java` (4 tests con Mockito)
-3. Crear `PacienteControllerTest.java` (7 tests)
-4. Ejecutar tests: `mvn test`
-5. Verificar: 13/13 tests pasando
-6. Commits atómicos (3 commits separados)
-7. Commit resumen de fase
+### Total Tests Actual:
+- Turno: 13/13 ✅
+- Paciente: 13/13 ✅
+- Usuario: 13/13 ✅
+- TareaClinica: 18/18 ✅
+- Security: 8/8 ✅
+- Dashboard: 3/3 ✅
+- **Total: 69/69** ✅
 
-**Archivos de referencia:**
-- `TurnoRepositoryTest.java`
-- `TurnoServiceTest.java`
-- `TurnoControllerTest.java`
-
-**Adaptar a Paciente:**
-- Campo único: `numeroHistoriaClinica` (en lugar de `nombre`)
-- Campos: nombre, apellidos, fechaNacimiento, habitacion
+### 🎉 PROYECTO MEDITRACK 100% COMPLETADO
 
 ---
 
-### ⏳ FASE 5: USUARIO CON BCRYPT
-1. Crear `PasswordEncoderConfig.java` en config/
-```java
-   @Configuration
-   public class PasswordEncoderConfig {
-       @Bean
-       public PasswordEncoder passwordEncoder() {
-           return new BCryptPasswordEncoder();
-       }
-   }
+## 🎯 SIGUIENTE PASO INMEDIATO
+
+### FASE 9 - DASHBOARD SUPERVISOR EN TIEMPO REAL CON WEBFLUX Y SSE
+
+**🎉 ESTA ES LA FASE FINAL DEL PROYECTO 🎉**
+
+**Objetivo:** Crear un dashboard dinámico para el supervisor que muestre estadísticas y carga de trabajo actualizándose automáticamente en tiempo real usando Server-Sent Events (SSE) con Spring WebFlux.
+
+---
+
+### ¿QUÉ ES SSE (Server-Sent Events)?
+
+SSE permite al servidor enviar actualizaciones automáticas al navegador sin que el cliente tenga que hacer peticiones constantes (polling).
+
+**Características:**
+- Unidireccional: servidor → cliente
+- Sobre HTTP estándar
+- Reconexión automática
+- Más simple que WebSockets
+- Perfecto para dashboards y notificaciones
+
+**Flujo:**
+1. Navegador abre conexión HTTP al endpoint SSE
+2. Servidor mantiene la conexión abierta
+3. Servidor envía eventos periódicamente (cada 5 segundos)
+4. Navegador recibe eventos y actualiza la vista con JavaScript
+
+---
+
+### DATOS A MOSTRAR EN TIEMPO REAL
+
+El dashboard debe mostrar y actualizar cada **5 segundos**:
+
+#### 1. Estadísticas Generales
+- Total de tareas en el sistema
+- Tareas pendientes
+- Tareas en curso
+- Tareas realizadas hoy
+- Tareas canceladas
+- Total de pacientes activos
+- Total de usuarios (enfermería)
+
+#### 2. Carga de Trabajo por Turno
+- Mañana: X tareas asignadas
+- Tarde: Y tareas asignadas
+- Noche: Z tareas asignadas
+
+#### 3. Distribución por Estado
+- Pendientes: X
+- En Curso: Y
+- Realizadas: Z
+- Canceladas: W
+
+#### 4. Distribución por Prioridad
+- Urgentes: X
+- Altas: Y
+- Medias: Z
+- Bajas: W
+
+#### 5. Top 5 Enfermeros
+- Ranking de enfermeros con más tareas asignadas
+- Mostrar nombre completo y número de tareas
+
+#### 6. Alertas (Opcional)
+- Tareas urgentes pendientes
+- Turnos con sobrecarga (más de 10 tareas)
+
+---
+
+### ARQUITECTURA DE LA SOLUCIÓN
+FRONTEND (JavaScript EventSource)
+↓
+Conecta a /api/supervisor/dashboard/stream
+↓
+BACKEND (SupervisorRealtimeController)
+↓
+Flux.interval(5 seconds) con WebFlux
+↓
+SERVICIO (DashboardService)
+↓
+Calcula estadísticas en tiempo real
+↓
+Devuelve DashboardData (DTO)
+↓
+FRONTEND actualiza gráficos y tarjetas
+
+---
+
+### ACCIÓN REQUERIDA
+
+#### 1. **Crear DTOs para Dashboard**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/model/dto/`
+
+Crear los siguientes DTOs:
+
+##### A. DashboardStats.java
+- Campos: totalTareas, tareasPendientes, tareasEnCurso, tareasRealizadas, tareasCanceladas, totalPacientes, totalEnfermeros
+- Usar Lombok: @Data, @NoArgsConstructor, @AllArgsConstructor
+
+##### B. UsuarioConTareas.java
+- Campos: usuarioId (Long), nombreCompleto (String), numeroTareas (Long)
+- Usar Lombok
+
+##### C. DashboardData.java (DTO principal que envuelve todo)
+- Campo: timestamp (LocalDateTime)
+- Campo: stats (DashboardStats)
+- Campo: cargaPorTurno (Map<String, Long>)
+- Campo: tareasPorPrioridad (Map<Prioridad, Long>)
+- Campo: topEnfermeros (List<UsuarioConTareas>)
+- Usar Lombok
+
+**IMPORTANTE:** Este es el objeto JSON que se enviará cada 5 segundos via SSE.
+
+---
+
+#### 2. **Crear DashboardService.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/service/DashboardService.java`
+
+**Responsabilidad:** Calcular todas las estadísticas del dashboard en tiempo real.
+
+**Métodos necesarios:**
+
+1. `obtenerEstadisticasGenerales()` → `DashboardStats`
+   - Obtener todas las tareas del sistema
+   - Contar tareas por estado (PENDIENTE, EN_CURSO, REALIZADA, CANCELADA)
+   - Contar total pacientes
+   - Contar usuarios con rol ENFERMERIA
+   - Devolver DashboardStats completo
+
+2. `obtenerCargaPorTurno()` → `Map<String, Long>`
+   - Obtener todos los turnos
+   - Por cada turno, contar cuántas tareas tiene asignadas
+   - Devolver Map con: clave=nombreTurno, valor=numeroTareas
+
+3. `obtenerTareasPorPrioridad()` → `Map<Prioridad, Long>`
+   - Obtener todas las tareas
+   - Agrupar y contar por prioridad (URGENTE, ALTA, MEDIA, BAJA)
+   - Devolver Map
+
+4. `obtenerTop5EnfermerosConMasTareas()` → `List<UsuarioConTareas>`
+   - Obtener todos los usuarios con rol ENFERMERIA
+   - Por cada enfermero, contar cuántas tareas tiene asignadas
+   - Crear lista de UsuarioConTareas (id, nombreCompleto, numeroTareas)
+   - Ordenar descendente por numeroTareas
+   - Devolver top 5
+
+**Inyectar:** TareaClinicaService, PacienteService, UsuarioService, TurnoService
+
+**NOTA:** Todo debe calcularse en tiempo real sin caché.
+
+---
+
+#### 3. **Crear SupervisorRealtimeController.java**
+
+**Ubicación:** `src/main/java/com/hospital/meditrack/controller/SupervisorRealtimeController.java`
+
+**Responsabilidad:** Endpoint REST con SSE para streaming de datos.
+
+**Endpoint:**
+
+- **URL:** `/api/supervisor/dashboard/stream`
+- **Método:** GET
+- **Produces:** `MediaType.TEXT_EVENT_STREAM_VALUE`
+- **Return:** `Flux<ServerSentEvent<DashboardData>>`
+
+**Implementación:**
+
+Usar `Flux.interval(Duration.ofSeconds(5))` para emitir cada 5 segundos.
+
+Por cada emisión:
+1. Crear objeto DashboardData vacío
+2. Asignar timestamp actual: `LocalDateTime.now()`
+3. Obtener stats: `dashboardService.obtenerEstadisticasGenerales()`
+4. Obtener cargaPorTurno: `dashboardService.obtenerCargaPorTurno()`
+5. Obtener tareasPorPrioridad: `dashboardService.obtenerTareasPorPrioridad()`
+6. Obtener topEnfermeros: `dashboardService.obtenerTop5EnfermerosConMasTareas()`
+7. Crear `ServerSentEvent` con:
+   - id: número de secuencia
+   - event: "dashboard-update"
+   - data: objeto DashboardData completo
+8. Devolver el evento
+
+**IMPORTANTE:**
+- Usar @RestController y @RequestMapping("/api/supervisor")
+- Inyectar DashboardService
+- El Flux emitirá infinitamente cada 5 segundos hasta que el navegador cierre la conexión
+
+---
+
+#### 4. **Actualizar SecurityConfig.java**
+
+Añadir permiso para el endpoint SSE en las reglas de autorización:
+.requestMatchers("/api/supervisor/dashboard/stream").hasRole("SUPERVISOR")
+
+**Ubicación:** Dentro del método `filterChain()`, en la sección de autorizaciones de API, después de las reglas de `/api/tareas/**` y antes de `.anyRequest().authenticated()`.
+
+---
+
+#### 5. **Crear Vista dashboard-realtime.html**
+
+**Ubicación:** `src/main/resources/templates/supervisor/dashboard-realtime.html`
+
+**Requisitos de Diseño:**
+
+##### A. Estructura HTML
+- Usar `th:replace` para incluir navbar de fragments/header.html
+- Título: "Dashboard en Tiempo Real - Supervisor"
+- Mostrar badge de estado de conexión (verde=conectado, rojo=desconectado)
+- Mostrar última hora de actualización
+
+##### B. Sección de Estadísticas Generales
+Crear 7 tarjetas (cards) Bootstrap con los siguientes datos:
+- Total Tareas (color: primary/azul)
+- Tareas Pendientes (color: warning/amarillo)
+- Tareas En Curso (color: info/cyan)
+- Tareas Realizadas (color: success/verde)
+- Tareas Canceladas (color: danger/rojo)
+- Total Pacientes (color: secondary/gris)
+- Total Enfermeros (color: dark/negro)
+
+Cada card debe tener un ID único para actualizar su valor con JavaScript.
+
+##### C. Sección de Gráficos
+Usar **Chart.js** (desde CDN: https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js)
+
+**Gráfico 1: Carga por Turno (Barras)**
+- Canvas con id: `chart-turnos`
+- Tipo: bar (barras verticales)
+- Labels: ["Mañana", "Tarde", "Noche"]
+- Colores diferentes por barra
+
+**Gráfico 2: Tareas por Prioridad (Donut)**
+- Canvas con id: `chart-prioridades`
+- Tipo: doughnut
+- Labels: ["Urgente", "Alta", "Media", "Baja"]
+- Colores: rojo, naranja, amarillo, gris
+
+##### D. Sección de Top 5 Enfermeros
+- Tabla Bootstrap con columnas: #, Nombre, Tareas Asignadas
+- tbody con id: `top-enfermeros`
+- Se actualizará dinámicamente con JavaScript
+
+##### E. JavaScript para SSE
+
+**Funcionalidades requeridas:**
+
+1. **Inicializar gráficos Chart.js:**
+   - Crear gráfico de barras para turnos (datos iniciales en 0)
+   - Crear gráfico de donut para prioridades (datos iniciales en 0)
+
+2. **Conectar a SSE:**
+   - Crear EventSource conectado a `/api/supervisor/dashboard/stream`
+   - Escuchar evento `dashboard-update`
+
+3. **Al recibir evento:**
+   - Parsear JSON del evento: `const data = JSON.parse(event.data)`
+   - Actualizar timestamp de última actualización
+   - Actualizar todas las tarjetas de estadísticas (con animación opcional)
+   - Actualizar gráfico de turnos con nuevos datos
+   - Actualizar gráfico de prioridades con nuevos datos
+   - Actualizar tabla de top enfermeros
+
+4. **Funciones helper:**
+   - `updateStatCard(elementId, newValue)`: actualiza el valor de una tarjeta
+   - `updateTopEnfermeros(enfermeros)`: actualiza la tabla con el ranking
+   - Opcional: añadir animación a las tarjetas cuando se actualizan
+
+5. **Manejo de conexión:**
+   - Al conectar: badge verde "Conectado"
+   - Al desconectar: badge rojo "Desconectado"
+   - EventSource se reconecta automáticamente
+
+**Estructura del evento SSE recibido:**
+```json
+{
+  "timestamp": "2026-04-29T10:30:00",
+  "stats": {
+    "totalTareas": 45,
+    "tareasPendientes": 12,
+    "tareasEnCurso": 8,
+    "tareasRealizadas": 23,
+    "tareasCanceladas": 2,
+    "totalPacientes": 30,
+    "totalEnfermeros": 10
+  },
+  "cargaPorTurno": {
+    "Mañana": 18,
+    "Tarde": 15,
+    "Noche": 12
+  },
+  "tareasPorPrioridad": {
+    "URGENTE": 5,
+    "ALTA": 12,
+    "MEDIA": 20,
+    "BAJA": 8
+  },
+  "topEnfermeros": [
+    {"usuarioId": 1, "nombreCompleto": "Ana García López", "numeroTareas": 8},
+    {"usuarioId": 2, "nombreCompleto": "Carlos Ruiz Pérez", "numeroTareas": 7},
+    ...
+  ]
+}
 ```
-2. Entity Usuario con password encriptado
-3. Repository, Service (encriptar en crear/actualizar), Controller
-4. Tests (13 tests)
-5. Commits atómicos
 
 ---
 
-### ⏳ FASE 6: TAREACLINICA (LA MÁS COMPLEJA)
-1. Entity con 3 relaciones @ManyToOne
-2. Repository con métodos:
-    - findByPacienteId
-    - findByAsignadoAId
-    - findByTurnoId
-    - findByEstado
-    - findByPrioridad
-3. Service con validaciones de relaciones
-4. Controller con endpoints adicionales para filtros
-5. Tests (mínimo 15 tests por la complejidad)
-6. Commits atómicos
+#### 6. **Añadir Enlace en Navbar de Supervisor**
+
+**Actualizar:** `src/main/resources/templates/fragments/header.html`
+
+En la sección del menú SUPERVISOR, añadir un nuevo enlace:
+
+```html
+<li class="nav-item" sec:authorize="hasRole('SUPERVISOR')">
+    <a class="nav-link" th:href="@{/supervisor/dashboard-realtime}">
+        📊 Dashboard Tiempo Real
+    </a>
+</li>
+```
 
 ---
 
-### ⏳ FASE 7: SPRING SECURITY
-1. Crear `SecurityConfig.java`
-2. Configurar autenticación por roles (RBAC)
-3. Endpoints protegidos según rol:
-    - ENFERMERIA: Solo consultar y actualizar tareas asignadas
-    - MEDICINA: Crear tareas y asignar
-    - SUPERVISOR: Todo (reasignar, visualizar carga)
-4. Login personalizado
-5. Tests de seguridad
-6. Commits atómicos
+#### 7. **Crear Controlador Web para la Vista**
+
+**Actualizar:** `src/main/java/com/hospital/meditrack/controller/SupervisorWebController.java`
+
+Añadir método:
+
+```java
+@GetMapping("/dashboard-realtime")
+public String dashboardRealtime() {
+    return "supervisor/dashboard-realtime";
+}
+```
 
 ---
 
-### ⏳ FASE 8: VISTAS THYMELEAF
-1. Crear carpeta `templates/` con subcarpetas:
-    - `enfermeria/`
-    - `medicina/`
-    - `supervisor/`
-    - `common/`
-2. Vistas por rol con Bootstrap/Tailwind
-3. Formularios para CRUD
-4. Controladores MVC (además de REST)
-5. Commits atómicos
+#### 8. **Tests (Opcionales - 3 tests básicos)**
+
+Crear tests básicos para verificar:
+
+1. **Test de DashboardService:**
+   - Verificar que `obtenerEstadisticasGenerales()` devuelve DashboardStats válido
+   - Usar Mockito para mockear los servicios
+
+2. **Test de SupervisorRealtimeController:**
+   - Verificar que el endpoint `/api/supervisor/dashboard/stream` devuelve Flux
+   - Verificar que emite eventos cada 5 segundos (usar StepVerifier de Reactor)
+
+3. **Test de Seguridad:**
+   - Verificar que solo SUPERVISOR puede acceder al endpoint SSE
+   - Verificar que ENFERMERIA y MEDICINA reciben 403
+
+**NOTA:** Los tests para SSE son opcionales. Si se crean, usar `reactor-test` y `StepVerifier`.
 
 ---
 
-### ⏳ FASE 9: DASHBOARD SUPERVISOR CON WEBFLUX
-1. Configurar WebFlux para SSE (Server-Sent Events)
-2. Crear endpoint de streaming: `/api/supervisor/dashboard/stream`
-3. Vista en tiempo real de carga de trabajo
-4. Gráficos con Chart.js
-5. Tests
-6. Commits atómicos
+#### 9. **Commits Atómicos**
+
+1. `feat: Crear DTOs para dashboard (DashboardStats, UsuarioConTareas, DashboardData)`
+2. `feat: Crear DashboardService con cálculo de estadísticas en tiempo real`
+3. `feat: Crear SupervisorRealtimeController con endpoint SSE`
+4. `config: Actualizar SecurityConfig para endpoint SSE`
+5. `feat: Crear vista dashboard-realtime.html con Chart.js y SSE`
+6. `feat: Actualizar navbar con enlace a Dashboard Tiempo Real`
+7. `test: Añadir tests básicos para DashboardService y SSE (opcional)`
+8. `docs: Actualizar README con funcionalidades de Fase 9`
+9. `feat: Completar Fase 9 - Dashboard Supervisor en Tiempo Real con SSE`
 
 ---
+
+### ⚠️ CONSIDERACIONES ESPECIALES
+
+#### 1. WebFlux vs Spring MVC
+Este proyecto usa Spring MVC (bloqueante), pero WebFlux solo se usa para el endpoint SSE.
+
+**IMPORTANTE:**
+- Solo el endpoint `/api/supervisor/dashboard/stream` usa WebFlux (Flux)
+- El resto del proyecto sigue con Spring MVC (no cambiar)
+- Spring Boot puede mezclar ambos sin problemas
+
+#### 2. Dependencias
+Verificar que `spring-boot-starter-webflux` está en `pom.xml` (ya incluido desde Fase 1).
+
+#### 3. Rendimiento
+Cada conexión SSE mantiene una thread abierta. Con pocos usuarios supervisor (1-5) no hay problema.
+
+Para producción con muchos supervisores, considerar:
+- Aumentar pool de threads
+- Usar caché Redis para las estadísticas
+- Reducir frecuencia de actualización (cada 10-15 segundos)
+
+#### 4. Reconexión Automática
+EventSource del navegador reconecta automáticamente si se pierde la conexión.
+
+#### 5. CORS (si fuera necesario)
+Si el frontend estuviera en otro dominio, configurar CORS en SecurityConfig.
+
+Para este proyecto (frontend y backend juntos), NO es necesario.
+
+---
+
+### 📋 CHECKLIST FASE 9
+
+**Backend:**
+- [ ] DashboardStats.java creado
+- [ ] UsuarioConTareas.java creado
+- [ ] DashboardData.java creado
+- [ ] DashboardService.java creado con 4 métodos
+- [ ] SupervisorRealtimeController.java creado con endpoint SSE
+- [ ] SecurityConfig.java actualizado
+
+**Frontend:**
+- [ ] dashboard-realtime.html creado
+- [ ] Chart.js integrado
+- [ ] JavaScript SSE implementado
+- [ ] Gráficos de barras y donut funcionando
+- [ ] Tabla top enfermeros actualizable
+- [ ] Navbar actualizado con enlace
+
+**Testing:**
+- [ ] SupervisorWebController actualizado
+- [ ] Tests básicos (opcional)
+
+**Verificación:**
+- [ ] Arrancar app: `mvn spring-boot:run`
+- [ ] Login como supervisor
+- [ ] Ir a "Dashboard Tiempo Real"
+- [ ] Verificar que las estadísticas se actualizan cada 5 segundos
+- [ ] Verificar que los gráficos se actualizan
+- [ ] Verificar que la tabla de enfermeros se actualiza
+- [ ] Crear una tarea desde otra ventana y ver actualización en tiempo real
+
+**Commits:**
+- [ ] 9 commits atómicos realizados
+- [ ] Push a GitHub completado
+
+---
+
+### 🎯 RESULTADO ESPERADO AL COMPLETAR FASE 9
+
+**Sistema MediTrack 100% COMPLETADO:**
+
+✅ Backend REST API completo (CRUD todas las entidades)
+✅ Seguridad con Spring Security (RBAC por roles)
+✅ Frontend web con Thymeleaf (vistas por rol)
+✅ Dashboard en tiempo real con SSE y WebFlux
+✅ Autenticación y autorización funcional
+✅ 65+ tests pasando
+✅ Interfaz responsive con Bootstrap 5
+✅ Gráficos interactivos con Chart.js
+✅ Actualización automática cada 5 segundos
+
+**Funcionalidades por Rol:**
+
+**ENFERMERIA:**
+- Ver sus tareas asignadas
+- Actualizar estado de tareas
+- Ver información de pacientes
+
+**MEDICINA:**
+- Crear tareas clínicas
+- Asignar tareas a enfermería
+- Crear pacientes
+- Ver todas las tareas
+
+**SUPERVISOR:**
+- Dashboard estático (Fase 8)
+- Dashboard en tiempo real (Fase 9)
+- Reasignar tareas
+- Gestionar usuarios
+- Ver carga de trabajo en vivo
+
+---
+
+### 📚 DOCUMENTACIÓN FINAL
+
+Al terminar Fase 9, actualizar README.md del proyecto con:
+
+1. **Descripción del proyecto**
+2. **Tecnologías utilizadas**
+3. **Instalación y configuración**
+4. **Usuarios de prueba:**
+   - enfermera / enfermera123
+   - medico / medico123
+   - supervisor / supervisor123
+5. **Endpoints API REST**
+6. **Capturas de pantalla (opcional)**
+7. **Arquitectura del sistema**
+8. **Próximos pasos (mejoras futuras)**
+
+---
+
+### 🎓 APRENDIZAJES DE LA FASE 9
+
+**Conceptos nuevos aplicados:**
+- Server-Sent Events (SSE)
+- Spring WebFlux con Flux
+- Streaming de datos en tiempo real
+- Chart.js para visualización
+- EventSource JavaScript API
+- Reconexión automática
+- Cálculo de estadísticas agregadas
+- DTOs para transferencia de datos complejos
+
+---
+
+### 🚀 MEJORAS FUTURAS (POST-TFG)
+
+Ideas para extender el proyecto después de la defensa:
+
+1. **Notificaciones Push:** Alertas cuando hay tareas urgentes
+2. **Exportar datos:** PDF/Excel con reportes
+3. **Historial de reasignaciones:** Auditoría de cambios
+4. **Chat entre usuarios:** Comunicación interna
+5. **App móvil:** React Native o Flutter
+6. **Análisis predictivo:** ML para predecir carga de trabajo
+7. **Integración con sistemas hospitalarios:** HL7, FHIR
+8. **Multi-tenant:** Múltiples hospitales en una instalación
+
+---
+
+**ÚLTIMA ACTUALIZACIÓN:** [Fecha actual]
+**ESTADO:** Fase 9 en progreso - Dashboard en tiempo real con SSE
+**PRÓXIMA ACCIÓN:** Implementar SSE con WebFlux y Chart.js
+
+Guarda y Haz Commit:
+bashgit add CLAUDE.md
+git commit -m "docs: Actualizar CLAUDE.md para Fase 9 - Dashboard Tiempo Real con SSE
+
+FASE FINAL DEL PROYECTO
+
+- Especificación completa de SSE con WebFlux
+- DashboardService con estadísticas en tiempo real
+- SupervisorRealtimeController con Flux streaming
+- Vista con Chart.js y EventSource JavaScript
+- Actualización cada 5 segundos
+- 9 commits atómicos planificados
+
+Esta es la última fase del desarrollo del TFG MediTrack."
+
+git push origin main
+
+
 
 ## ⚠️ REGLAS CRÍTICAS
 
@@ -535,575 +1009,6 @@ mvn test
 **TODOS los tests deben pasar (verde) antes de hacer commit.**
 
 ---
-## 📊 PROGRESO ACTUAL
-
-### Completado:
-- ✅ Fase 1-3: Enumeraciones + Turno completo (13 tests)
-- ✅ Fase 4: Paciente completo (13 tests)
-- ✅ Fase 5: Usuario con BCrypt (13 tests)
-- ✅ Fase 6: TareaClinica con relaciones (18 tests)
-- ✅ Fase 7: Spring Security con RBAC (8 tests)
-- ✅ Fase 8: Vistas Thymeleaf por Rol (sin tests adicionales)
-
-### En Progreso:
-- 🔄 Fase 9: Dashboard Supervisor con WebFlux y SSE
-
-### Total Tests Actual:
-- Turno: 13/13 ✅
-- Paciente: 13/13 ✅
-- Usuario: 13/13 ✅
-- TareaClinica: 18/18 ✅
-- Security: 8/8 ✅
-- App: 1/1 ✅
-- **Total: 66/66** ✅
-
----
-
-## 🎯 SIGUIENTE PASO INMEDIATO
-
-### FASE 8 - VISTAS THYMELEAF POR ROL
-
-**Objetivo:** Crear interfaces web con Thymeleaf separadas por rol (ENFERMERIA, MEDICINA, SUPERVISOR) con formularios funcionales, navegación intuitiva y diseño responsive con Bootstrap 5.
-
----
-
-### ARQUITECTURA DE VISTAS
-
-Crear la siguiente estructura de plantillas Thymeleaf en `src/main/resources/templates/`:
-templates/
-├── login.html                      # Página de login con diseño moderno
-├── index.html                      # Redirige según rol (opcional)
-├── error.html                      # Página de error genérica
-│
-├── fragments/
-│   ├── header.html                 # Header común con navbar Bootstrap y menú por rol
-│   ├── footer.html                 # Footer común (opcional)
-│   └── sidebar.html                # Sidebar común (opcional)
-│
-├── enfermeria/
-│   ├── dashboard.html              # Dashboard con resumen de tareas asignadas
-│   ├── mis-tareas.html             # Lista de tareas con filtros y actualización de estado
-│   └── paciente-detalle.html       # Ver detalles de paciente (opcional)
-│
-├── medicina/
-│   ├── dashboard.html              # Dashboard con estadísticas generales
-│   ├── crear-tarea.html            # Formulario para crear tarea clínica
-│   ├── pacientes.html              # Lista de pacientes
-│   └── crear-paciente.html         # Formulario para crear paciente
-│
-└── supervisor/
-├── dashboard.html              # Dashboard con vista general del sistema
-├── carga-trabajo.html          # Vista de carga por turno
-├── reasignar-tareas.html       # Formulario para reasignar tareas
-└── usuarios.html               # Lista y gestión de usuarios
-
----
-
-### FUNCIONALIDADES POR ROL
-
-#### ROL: ENFERMERIA
-**Puede:**
-- Ver dashboard con sus tareas asignadas
-- Ver lista completa de sus tareas (filtrar por estado, prioridad)
-- Actualizar estado de tarea (PENDIENTE → EN_CURSO → REALIZADA)
-- Añadir observaciones a tareas
-- Ver información básica de pacientes asociados a sus tareas
-
-**No puede:**
-- Crear tareas
-- Asignar tareas
-- Eliminar tareas
-- Gestionar usuarios
-
-#### ROL: MEDICINA
-**Puede:**
-- Ver dashboard con estadísticas generales
-- Crear nuevas tareas clínicas (formulario completo)
-- Asignar tareas a personal de enfermería
-- Ver todas las tareas del sistema
-- Crear pacientes (formulario completo)
-- Ver lista de pacientes
-
-**No puede:**
-- Eliminar usuarios
-- Reasignar tareas ya asignadas (solo SUPERVISOR)
-- Gestionar usuarios del sistema
-
-#### ROL: SUPERVISOR
-**Puede:**
-- Ver dashboard con vista general del sistema
-- Ver carga de trabajo por turno
-- Reasignar tareas entre usuarios
-- Ver lista de todos los usuarios
-- Acceso completo a todas las funcionalidades
-
----
-
-### ACCIÓN REQUERIDA
-
-#### 1. **Actualizar SecurityConfig.java**
-
-Modificar `src/main/java/com/hospital/meditrack/config/SecurityConfig.java` para añadir:
-
-**Cambios necesarios:**
-- Activar formulario de login con `.formLogin()` en lugar de solo HTTP Basic
-- Definir página de login personalizada: `/login`
-- Configurar logout con redirección a `/login?logout`
-- Permitir acceso público a recursos estáticos (`/css/**`, `/js/**`, `/images/**`, `/webjars/**`)
-- Proteger rutas web por rol:
-   - `/enfermeria/**` → `hasRole("ENFERMERIA")`
-   - `/medicina/**` → `hasRole("MEDICINA")`
-   - `/supervisor/**` → `hasRole("SUPERVISOR")`
-- Permitir acceso a `/login` y `/error` sin autenticación
-- Mantener las reglas de API REST de la Fase 7 (no eliminar)
-- Mantener HTTP Basic para API REST (compatibilidad)
-
-**IMPORTANTE:** Mantener CSRF habilitado (por defecto) para formularios web.
-
----
-
-#### 2. **Crear WebController.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/controller/WebController.java`
-
-**Responsabilidad:** Controlador principal para navegación web (NO REST).
-
-**Endpoints necesarios:**
-- `GET /login` → Devuelve vista "login"
-- `GET /` y `GET /index` → Redirige según rol del usuario autenticado:
-   - ROLE_ENFERMERIA → `redirect:/enfermeria/dashboard`
-   - ROLE_MEDICINA → `redirect:/medicina/dashboard`
-   - ROLE_SUPERVISOR → `redirect:/supervisor/dashboard`
-
-**Nota:** Usar `Authentication` para obtener el rol del usuario.
-
----
-
-#### 3. **Crear EnfermeriaWebController.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/controller/EnfermeriaWebController.java`
-
-**Responsabilidad:** Vistas para el rol ENFERMERIA.
-
-**Endpoints necesarios:**
-
-1. `GET /enfermeria/dashboard`
-   - Obtener usuario autenticado desde `Authentication`
-   - Obtener tareas asignadas al usuario (`tareaService.obtenerPorUsuario()`)
-   - Pasar al modelo: `usuario`, `tareas`, `totalTareas`
-   - Devolver vista: `enfermeria/dashboard`
-
-2. `GET /enfermeria/mis-tareas`
-   - Listar todas las tareas del usuario autenticado
-   - Devolver vista: `enfermeria/mis-tareas`
-
-3. `POST /enfermeria/tareas/{id}/actualizar-estado`
-   - Parámetros: `nuevoEstado` (String), `observaciones` (String, opcional)
-   - Actualizar estado de la tarea
-   - Añadir observaciones si se proporcionan
-   - Redirigir a `/enfermeria/mis-tareas`
-
----
-
-#### 4. **Crear MedicinaWebController.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/controller/MedicinaWebController.java`
-
-**Responsabilidad:** Vistas para el rol MEDICINA.
-
-**Endpoints necesarios:**
-
-1. `GET /medicina/dashboard`
-   - Obtener estadísticas: total tareas, total pacientes
-   - Obtener tareas recientes (últimas 5)
-   - Devolver vista: `medicina/dashboard`
-
-2. `GET /medicina/crear-tarea`
-   - Obtener listas para selects del formulario:
-      - Pacientes (todos)
-      - Usuarios con rol ENFERMERIA
-      - Turnos (todos)
-   - Pasar objeto vacío `new TareaClinica()` para el formulario
-   - Devolver vista: `medicina/crear-tarea`
-
-3. `POST /medicina/crear-tarea`
-   - Recibir `@ModelAttribute TareaClinica tarea`
-   - Llamar a `tareaService.crear(tarea)`
-   - Redirigir a `/medicina/dashboard`
-
-4. `GET /medicina/pacientes`
-   - Listar todos los pacientes
-   - Devolver vista: `medicina/pacientes`
-
-5. `GET /medicina/crear-paciente`
-   - Pasar objeto vacío `new Paciente()`
-   - Devolver vista: `medicina/crear-paciente`
-
-6. `POST /medicina/crear-paciente`
-   - Recibir `@ModelAttribute Paciente paciente`
-   - Llamar a `pacienteService.crear(paciente)`
-   - Redirigir a `/medicina/pacientes`
-
----
-
-#### 5. **Crear SupervisorWebController.java**
-
-**Ubicación:** `src/main/java/com/hospital/meditrack/controller/SupervisorWebController.java`
-
-**Responsabilidad:** Vistas para el rol SUPERVISOR.
-
-**Endpoints necesarios:**
-
-1. `GET /supervisor/dashboard`
-   - Obtener totales: tareas, usuarios, turnos
-   - Devolver vista: `supervisor/dashboard`
-
-2. `GET /supervisor/carga-trabajo`
-   - Obtener todos los turnos
-   - Calcular tareas por turno (Map<String, Long>)
-   - Devolver vista: `supervisor/carga-trabajo`
-
-3. `GET /supervisor/usuarios`
-   - Listar todos los usuarios
-   - Devolver vista: `supervisor/usuarios`
-
-4. `GET /supervisor/reasignar-tareas`
-   - Obtener todas las tareas
-   - Obtener todos los usuarios
-   - Devolver vista: `supervisor/reasignar-tareas`
-
-5. `POST /supervisor/reasignar-tarea/{id}`
-   - Parámetro: `nuevoUsuarioId` (Long)
-   - Obtener tarea por id
-   - Obtener nuevo usuario por id
-   - Actualizar tarea con nuevo usuario asignado
-   - Redirigir a `/supervisor/reasignar-tareas`
-
----
-
-#### 6. **Crear Vistas HTML con Thymeleaf**
-
-**Tecnologías a usar:**
-- Thymeleaf con sintaxis estándar
-- Bootstrap 5 (CDN: https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)
-- Bootstrap Icons (CDN: https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css)
-- Thymeleaf Security extras para `sec:authorize` (ya incluido en dependencies)
-
-**Requisitos de diseño:**
-- Diseño responsive (mobile-first)
-- Colores coherentes por rol (opcional: enfermería=azul, medicina=verde, supervisor=morado)
-- Navegación clara con navbar Bootstrap
-- Formularios con validación HTML5 (`required`, `type`, etc.)
-- Tablas con clase `table table-hover`
-- Badges para estados (pendiente=warning, en_curso=primary, realizada=success)
-- Badges para prioridades (urgente=danger, alta=warning, media/baja=secondary)
-
-**Vistas a crear (MÍNIMO):**
-
-##### A. login.html
-- Formulario de login centrado
-- Campo username y password
-- Botón "Iniciar Sesión"
-- Mostrar mensaje de error si `param.error` existe
-- Mostrar mensaje de logout si `param.logout` existe
-- Diseño moderno con gradiente o card Bootstrap
-- Incluir usuarios de prueba como texto informativo
-
-##### B. fragments/header.html
-- Fragmento `head` con imports de Bootstrap y Bootstrap Icons
-- Fragmento `navbar` con:
-   - Logo/nombre "MediTrack"
-   - Menú dinámico según rol usando `sec:authorize`
-   - Nombre de usuario autenticado (`sec:authentication="name"`)
-   - Botón de logout (formulario POST a `/logout`)
-
-##### C. enfermeria/dashboard.html
-- Header con `th:replace` del navbar
-- Card con total de tareas asignadas
-- Tabla con tareas recientes (máximo 5)
-- Columnas: Paciente, Descripción, Estado, Prioridad
-- Botón "Ver Todas las Tareas" → `/enfermeria/mis-tareas`
-
-##### D. enfermeria/mis-tareas.html
-- Tabla completa de tareas del usuario
-- Por cada tarea, formulario inline para cambiar estado
-- Select con estados (PENDIENTE, EN_CURSO, REALIZADA)
-- Campo textarea para observaciones (opcional)
-- Botón "Actualizar" por tarea
-
-##### E. medicina/crear-tarea.html
-- Formulario con `th:object="${tarea}"` y `th:field`
-- Select para paciente (mostrar nombre + HC)
-- Select para usuario asignado (solo rol ENFERMERIA)
-- Select para turno (mostrar nombre + horario)
-- Textarea para descripción
-- Selects para tipo, prioridad, estado
-- Input datetime-local para fecha
-- Botón "Crear Tarea"
-
-##### F. medicina/pacientes.html
-- Tabla con lista de pacientes
-- Columnas: Nombre, Apellidos, Fecha Nacimiento, HC, Habitación
-- Botón "Crear Nuevo Paciente" → `/medicina/crear-paciente`
-
-##### G. medicina/crear-paciente.html
-- Formulario con `th:object="${paciente}"`
-- Campos: nombre, apellidos, fechaNacimiento, numeroHistoriaClinica, habitacion
-- Validación HTML5 (required, pattern si es necesario)
-- Botón "Crear Paciente"
-
-##### H. supervisor/dashboard.html
-- Cards con totales: total tareas, total usuarios, total turnos
-- Tarjetas con iconos de Bootstrap Icons
-- Enlaces rápidos a: Carga de Trabajo, Usuarios, Reasignar Tareas
-
-##### I. supervisor/carga-trabajo.html
-- Tabla o cards mostrando cada turno
-- Por cada turno: nombre, horario, número de tareas asignadas
-- Opcional: gráfico simple con barras CSS
-
-##### J. supervisor/reasignar-tareas.html
-- Tabla de tareas
-- Por cada tarea: descripción, paciente, usuario actual
-- Select para cambiar usuario asignado
-- Botón "Reasignar" por tarea
-
----
-
-#### 7. **Añadir Dependencia de Thymeleaf Security**
-
-**Verificar en pom.xml que existe:**
-
-```xml
-<dependency>
-    <groupId>org.thymeleaf.extras</groupId>
-    <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-</dependency>
-```
-
-**Si NO existe, añadirla.**
-
-Esto permite usar `sec:authorize` en las vistas.
-
----
-
-#### 8. **Crear Recursos Estáticos (Opcional)**
-
-Si se desea personalizar CSS/JS:
-
-**Ubicación:** `src/main/resources/static/`
-
-Crear:
-- `static/css/custom.css` (estilos personalizados)
-- `static/js/scripts.js` (scripts personalizados)
-
-**Referenciar en las vistas con:**
-```html
-<link th:href="@{/css/custom.css}" rel="stylesheet">
-<script th:src="@{/js/scripts.js}"></script>
-```
-
----
-
-#### 9. **Tests (NO OBLIGATORIOS para Fase 8)**
-
-La Fase 8 es principalmente UI. Tests opcionales:
-
-- Tests de integración con MockMvc para verificar que las vistas se cargan
-- Tests de seguridad para verificar que cada rol solo accede a sus vistas
-
-**Si se crean tests:** Máximo 5 tests básicos de navegación.
-
-**Si NO se crean tests:** Está aceptado para esta fase, ya que el enfoque es UI.
-
----
-
-#### 10. **Commits Atómicos**
-
-1. `config: Actualizar SecurityConfig para soporte de vistas web y formLogin`
-2. `feat: Crear WebController con redirección por rol`
-3. `feat: Crear EnfermeriaWebController con vistas de enfermería`
-4. `feat: Crear MedicinaWebController con vistas de medicina`
-5. `feat: Crear SupervisorWebController con vistas de supervisor`
-6. `feat: Crear vista de login y fragments comunes (header)`
-7. `feat: Crear vistas de enfermería (dashboard, mis-tareas)`
-8. `feat: Crear vistas de medicina (dashboard, crear-tarea, pacientes, crear-paciente)`
-9. `feat: Crear vistas de supervisor (dashboard, carga-trabajo, reasignar-tareas, usuarios)`
-10. `feat: Completar Fase 8 - Vistas Thymeleaf por Rol`
-
----
-
-#### 11. **Verificación Manual (POST-IMPLEMENTACIÓN)**
-
-**Arrancar aplicación:**
-```bash
-mvn spring-boot:run
-```
-
-**Probar flujos:**
-
-1. **Login:**
-   - Ir a http://localhost:8080/login
-   - Probar usuario: `enfermera` / `enfermera123`
-   - Verificar redirección a `/enfermeria/dashboard`
-
-2. **Navegación ENFERMERIA:**
-   - Ver dashboard con tareas asignadas
-   - Ir a "Mis Tareas"
-   - Actualizar estado de una tarea
-   - Verificar que NO puede acceder a `/medicina/**` (403 Forbidden)
-
-3. **Navegación MEDICINA:**
-   - Login: `medico` / `medico123`
-   - Ver dashboard
-   - Crear nueva tarea (formulario completo)
-   - Crear nuevo paciente
-   - Verificar que la tarea aparece en enfermería
-
-4. **Navegación SUPERVISOR:**
-   - Login: `supervisor` / `supervisor123`
-   - Ver dashboard general
-   - Ver carga de trabajo por turno
-   - Reasignar una tarea entre usuarios
-   - Verificar acceso a todas las secciones
-
-5. **Logout:**
-   - Click en botón "Salir"
-   - Verificar redirección a `/login?logout`
-
----
-
-### ⚠️ CONSIDERACIONES ESPECIALES
-
-**1. CSRF Token en Formularios:**
-
-Spring Security activa CSRF por defecto. Thymeleaf lo incluye automáticamente en formularios con `th:action`.
-
-**Ejemplo correcto:**
-```html
-<form th:action="@{/medicina/crear-tarea}" method="post">
-    <!-- Thymeleaf añade automáticamente el CSRF token -->
-</form>
-```
-
-**2. Formato de Fechas:**
-
-Para `LocalDateTime` en formularios, usar input type `datetime-local`:
-```html
-<input type="datetime-local" th:field="*{fecha}" class="form-control" required>
-```
-
-**3. Enums en Selects:**
-
-Para selects de enums, usar valores exactos:
-```html
-<select th:field="*{tipo}">
-    <option value="MEDICACION">Medicación</option>
-    <option value="CONTROL_SIGNOS_VITALES">Control Signos Vitales</option>
-    <!-- etc -->
-</select>
-```
-
-**4. Relaciones en Formularios:**
-
-Para asignar relaciones (@ManyToOne), usar el ID:
-```html
-<select th:field="*{paciente.id}">
-    <option th:each="p : ${pacientes}" th:value="${p.id}" th:text="${p.nombre}"></option>
-</select>
-```
-
-**5. Fragments de Thymeleaf:**
-
-Usar `th:replace` para incluir fragments:
-```html
-<!-- En header.html -->
-<nav th:fragment="navbar">...</nav>
-
-<!-- En otras vistas -->
-<nav th:replace="~{fragments/header :: navbar}"></nav>
-```
-
----
-
-### 📋 CHECKLIST FASE 8
-
-**Backend (Controllers):**
-- [ ] SecurityConfig actualizado con formLogin
-- [ ] WebController creado
-- [ ] EnfermeriaWebController creado
-- [ ] MedicinaWebController creado
-- [ ] SupervisorWebController creado
-
-**Frontend (Vistas):**
-- [ ] login.html creado
-- [ ] fragments/header.html creado
-- [ ] enfermeria/dashboard.html creado
-- [ ] enfermeria/mis-tareas.html creado
-- [ ] medicina/dashboard.html creado
-- [ ] medicina/crear-tarea.html creado
-- [ ] medicina/pacientes.html creado
-- [ ] medicina/crear-paciente.html creado
-- [ ] supervisor/dashboard.html creado
-- [ ] supervisor/carga-trabajo.html creado
-- [ ] supervisor/reasignar-tareas.html creado
-- [ ] supervisor/usuarios.html creado
-
-**Verificación:**
-- [ ] Login funciona con usuarios de prueba
-- [ ] Redirección por rol funciona
-- [ ] ENFERMERIA puede ver y actualizar sus tareas
-- [ ] MEDICINA puede crear tareas y pacientes
-- [ ] SUPERVISOR puede reasignar tareas
-- [ ] Logout funciona correctamente
-- [ ] No hay accesos no autorizados (403)
-
-**Commits:**
-- [ ] 10 commits atómicos realizados
-- [ ] Push a GitHub completado
-
----
-
-### 🎯 RESULTADO ESPERADO
-
-**Al terminar Fase 8:**
-- ✅ Sistema completo con interfaz web funcional
-- ✅ 3 dashboards separados por rol
-- ✅ Formularios funcionales para crear tareas y pacientes
-- ✅ Actualización de estado de tareas desde web
-- ✅ Navegación protegida por Spring Security
-- ✅ Diseño responsive con Bootstrap 5
-
-**Total del Proyecto:**
-- Backend: 100% completo
-- Frontend: 100% completo (web)
-- Tests: 65/65 ✅
-- Documentación: Actualizada
-
----
-
-**PRÓXIMA FASE:** Fase 9 - Dashboard Supervisor con WebFlux y SSE (Server-Sent Events) para actualización en tiempo real.
-
----
-
-**ÚLTIMA ACTUALIZACIÓN:** [Fecha actual]
-**ESTADO:** Fase 8 en progreso - Vistas Thymeleaf
-**PRÓXIMA ACCIÓN:** Crear controladores web y vistas Thymeleaf
-
-Guarda el archivo y haz commit:
-bashgit add CLAUDE.md
-git commit -m "docs: Actualizar CLAUDE.md para Fase 8 - Vistas Thymeleaf
-
-- Especificación completa de arquitectura de vistas
-- Controladores web por rol (Enfermería, Medicina, Supervisor)
-- Plantillas Thymeleaf con Bootstrap 5
-- Funcionalidades detalladas por rol
-- 10 commits atómicos planificados"
-
-git push origin main
-
-
-
 
 ## 🎯 INSTRUCCIÓN PRINCIPAL
 
